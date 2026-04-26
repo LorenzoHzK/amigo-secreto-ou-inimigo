@@ -1,6 +1,6 @@
 # 🛠️ Software Design Document (SDD)
 
-**Projeto:** RevealMe
+**Projeto:** Amigo Secreto ou Inimigo
 **Versão:** 1.0.0
 **Status:** 🟡 Em Definição (MVP)
 
@@ -251,4 +251,4 @@ function generateDraw(participants: Participant[]): Map<string, string> {
 
 ---
 
-_RevealMe — Documento confidencial para uso interno • v1.0.0 • 2026_
+_Amigo Secreto ou Inimigo — Documento confidencial para uso interno • v1.0.0 • 2026_

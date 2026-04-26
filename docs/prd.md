@@ -1,6 +1,6 @@
 # 📄 Product Requirements Document (PRD)
 
-**Projeto:** RevealMe
+**Projeto:** Amigo Secreto ou Inimigo
 **Versão:** 1.0.0
 **Status:** 🟡 Em Definição (MVP)
 
@@ -8,13 +8,13 @@
 
 ## 🎯 1. Visão Geral e Objetivo
 
-O **RevealMe** resolve um problema clássico em confraternizações: organizar um Amigo Oculto de forma justa, segura e sem a necessidade de uma pessoa intermediária que saiba todos os pares.
+O **Amigo Secreto ou Inimigo** resolve um problema clássico em confraternizações: organizar um Amigo Secreto de forma justa, segura e sem a necessidade de uma pessoa intermediária que saiba todos os pares.
 
-Com o RevealMe, qualquer pessoa pode criar um grupo, convidar os participantes por link e realizar o sorteio automático — onde cada participante só descobre o seu próprio par, mantendo o segredo dos demais. Tudo isso sem precisar criar conta ou fazer login.
+Com o Amigo Secreto ou Inimigo, qualquer pessoa pode criar um grupo, convidar os participantes por link e realizar o sorteio automático — onde cada participante só descobre o seu próprio par, mantendo o segredo dos demais. Tudo isso sem precisar criar conta ou fazer login.
 
 **Objetivo principal:**
 
-- Oferecer uma plataforma web (Angular + Tailwind) simples e intuitiva para organização de sorteios de Amigo Oculto.
+- Oferecer uma plataforma web (Angular + Tailwind) simples e intuitiva para organização de sorteios de Amigo Secreto.
 - Garantir privacidade individual: cada participante vê apenas o próprio resultado.
 - Eliminar fricção de acesso: tudo via link único, sem cadastro.
 
@@ -22,18 +22,18 @@ Com o RevealMe, qualquer pessoa pode criar um grupo, convidar os participantes p
 
 ## 📖 2. Glossário Ubíquo
 
-| Termo               | Definição                                                                                    |
-| ------------------- | -------------------------------------------------------------------------------------------- |
-| **Grupo**           | Conjunto de participantes reunidos para um sorteio de Amigo Oculto. Criado pelo Organizador. |
-| **Organizador**     | Usuário que cria e administra o grupo. Acessa via link de administração.                     |
-| **Participante**    | Pessoa que entra no grupo via link de convite e participa do sorteio.                        |
-| **Sorteio**         | Processo automático que distribui aleatoriamente os pares entre os participantes.            |
-| **Par**             | O participante que outro deverá presentear. Cada pessoa tem exatamente um par.               |
-| **Link de Convite** | URL única que permite qualquer pessoa entrar no grupo como participante.                     |
-| **Link Individual** | URL exclusiva do participante que permite revelar o seu próprio par sorteado.                |
-| **Link de Admin**   | URL exclusiva do organizador para gerenciar o grupo e realizar o sorteio.                    |
-| **Valor Limite**    | Valor máximo sugerido para o presente. Definido pelo organizador, opcional.                  |
-| **Revelar**         | Ação do participante de visualizar quem ele tirou no sorteio.                                |
+| Termo               | Definição                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| **Grupo**           | Conjunto de participantes reunidos para um sorteio de Amigo Secreto. Criado pelo Organizador. |
+| **Organizador**     | Usuário que cria e administra o grupo. Acessa via link de administração.                      |
+| **Participante**    | Pessoa que entra no grupo via link de convite e participa do sorteio.                         |
+| **Sorteio**         | Processo automático que distribui aleatoriamente os pares entre os participantes.             |
+| **Par**             | O participante que outro deverá presentear. Cada pessoa tem exatamente um par.                |
+| **Link de Convite** | URL única que permite qualquer pessoa entrar no grupo como participante.                      |
+| **Link Individual** | URL exclusiva do participante que permite revelar o seu próprio par sorteado.                 |
+| **Link de Admin**   | URL exclusiva do organizador para gerenciar o grupo e realizar o sorteio.                     |
+| **Valor Limite**    | Valor máximo sugerido para o presente. Definido pelo organizador, opcional.                   |
+| **Revelar**         | Ação do participante de visualizar quem ele tirou no sorteio.                                 |
 
 ---
 
@@ -62,9 +62,9 @@ Com o RevealMe, qualquer pessoa pode criar um grupo, convidar os participantes p
 
 ### 🗂️ Gerenciamento de Grupo
 
-**[US-02] Criar um grupo de amigo oculto**
+**[US-02] Criar um grupo de amigo secreto**
 
-> Como **organizador**, eu quero criar um grupo de amigo oculto para que eu possa reunir os participantes em um único lugar.
+> Como **organizador**, eu quero criar um grupo de amigo secreto para que eu possa reunir os participantes em um único lugar.
 
 - [ ] Formulário com nome do grupo e nome do organizador
 - [ ] O grupo recebe um identificador único
@@ -211,4 +211,4 @@ Com o RevealMe, qualquer pessoa pode criar um grupo, convidar os participantes p
 
 ---
 
-_RevealMe — Documento confidencial para uso interno • v1.0.0 • 2026_
+_Amigo Secreto ou Inimigo — Documento confidencial para uso interno • v1.0.0 • 2026_
