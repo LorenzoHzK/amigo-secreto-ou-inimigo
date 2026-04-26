@@ -1,59 +1,71 @@
-# AmigoOculto
+# 🎁 amigo secreto ou inimigo
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.22.
+**Status do Sistema:**
+[![CI](https://github.com/utfpr-gp/amigo-oculto/actions/workflows/ci.yml/badge.svg)](https://github.com/utfpr-gp/amigo-oculto/actions/workflows/ci.yml)
 
-## Development server
+🔗 **Link em Produção:** [Aguardando Deploy na Nuvem]
 
-To start a local development server, run:
+👨‍💻 **Autores:** Matheus Lorenzo e Eduardo
 
-```bash
-ng serve
-```
+## 🎯 1. Visão Geral
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Sistema de sorteio de amigo secreto online. Os participantes podem criar grupos, adicionar participantes, sortear pares e visualizar quem devem presentear. O sistema envia notificações e permite a gestão completa do amigo secreto.
 
-## Code scaffolding
+## 📚 2. Documentação Oficial (Docs as Code)
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Toda a especificação do sistema está versionada na pasta `/docs`:
 
-```bash
-ng generate component component-name
-```
+- 📄 **[PRD (Product Requirements Document)](./docs/prd.md):** Visão do produto, Personas, User Stories e Divisão de Épicos.
+- 📐 **[SDD (Software Design Document)](./docs/sdd.md):** Diagrama de banco de dados (Mermaid), contratos de API, DTOs e Fluxo de Autenticação.
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## 🛠 3. Stack Tecnológica
 
-```bash
-ng generate --help
-```
+- **Arquitetura:** Monorepo (Back e Front no mesmo repositório).
+- **Backend:** Supabase (PostgreSQL + Auth).
+- **Frontend:** Angular 19, TailwindCSS, DaisyUI.
+- **Linguagem:** TypeScript.
 
-## Building
+## 🚀 4. Quick Start (Como Executar)
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+**1. Clone o repositório:**
 
 ```bash
-ng test
+git clone https://github.com/LorenzoHzK/amigo-secreto-ou-inimigo.git
+cd amigo-secreto-ou-inimigo
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+**2. Instale as dependências:**
 
 ```bash
-ng e2e
+npm install
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+**3. Configure as variáveis de Ambiente:**
 
-## Additional Resources
+Crie um arquivo `.env` na raiz do projeto com as credenciais do Supabase:
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```env
+SUPABASE_URL=sua_url_do_supabase
+SUPABASE_KEY=sua_chave_anonima
+```
+
+**4. Inicie o Frontend:**
+
+```bash
+npm run dev:web
+```
+
+O aplicativo estará disponível em `http://localhost:4200/`
+
+---
+
+## 📖 Documentação Adicional
+
+Para mais detalhes sobre o sistema, consulte:
+
+- [PRD - Product Requirements Document](./docs/prd.md)
+- [SDD - Software Design Document](./docs/sdd.md)
+
+---
+
+Desenvolvido com ❤️ por Matheus Lorenzo e Eduardo - UTFPR Campus Guarapuava.
