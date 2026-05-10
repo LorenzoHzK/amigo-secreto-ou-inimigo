@@ -22,8 +22,9 @@ Toda a especificação do sistema está versionada na pasta `/docs`:
 
 - **Arquitetura:** Monorepo (Back e Front no mesmo repositório).
 - **Backend:** Supabase (PostgreSQL + Auth).
-- **Frontend:** Angular 19, TailwindCSS, DaisyUI.
+- **Frontend:** Angular 21, TailwindCSS v4, DaisyUI v5.
 - **Linguagem:** TypeScript.
+- **Ferramentas:** ESLint (Flat Config) e Prettier.
 
 ## 🚀 4. Quick Start (Como Executar)
 
@@ -56,6 +57,11 @@ npm run dev:web
 ```
 
 O aplicativo estará disponível em `http://localhost:4200/`
+
+**5. Ferramentas de Código:**
+
+- Formatar o código: `npm run format`
+- Executar o Linter: `npm run lint:web`
 
 ---
 

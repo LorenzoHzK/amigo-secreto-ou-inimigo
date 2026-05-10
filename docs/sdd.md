@@ -20,13 +20,13 @@
 
 > Definição estrita das tecnologias permitidas (`package.json`). Nenhuma dependência externa deve ser instalada sem refletir aqui.
 
-- **Core:** Angular 19+ (Standalone Components / Signals).
+- **Core:** Angular 21 (Standalone Components / Signals).
 - **BaaS & Auth:** `@supabase/supabase-js` — banco de dados, autenticação e realtime.
-- **Estilização & UI:** Tailwind CSS, Spartan UI (HLM), Lucide Angular (ícones).
+- **Estilização & UI:** Tailwind CSS v4, DaisyUI v5, Lucide Angular (ícones).
 - **Roteamento:** Angular Router com Functional Guards.
 - **Formulários:** Angular Reactive Forms + `zod` (validação de schemas).
 - **Utilitários:** `uuid` (geração de links únicos), `date-fns` (formatação de datas).
-- **Testes:** Jest + Angular Testing Library.
+- **Testes & Qualidade:** Jest + Angular Testing Library, ESLint (Flat Config) e Prettier.
 
 ---
 
