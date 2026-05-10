@@ -1,3 +1,101 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "daisyui";
+@source "./app";
+
+@theme {
+  --color-primary: #6c3bff;
+  --color-primary-50: #f0eeff;
+  --color-primary-100: #e5e1ff;
+  --color-primary-200: #d1ccff;
+  --color-primary-300: #b8b2ff;
+  --color-primary-400: #9f93ff;
+  --color-primary-500: #8b79ff;
+  --color-primary-600: #6c3bff;
+  --color-primary-700: #5a2ee8;
+  --color-primary-800: #4823d0;
+  --color-primary-900: #3619b9;
+
+  --color-secondary: #ff6b6b;
+  --color-secondary-50: #fff0f0;
+  --color-secondary-100: #ffe6e6;
+  --color-secondary-200: #ffd4d4;
+  --color-secondary-300: #ffb8b8;
+  --color-secondary-400: #ff9b9b;
+  --color-secondary-500: #ff7f7f;
+  --color-secondary-600: #ff6b6b;
+  --color-secondary-700: #e85a5a;
+  --color-secondary-800: #d04a4a;
+  --color-secondary-900: #b93b3b;
+
+  --color-accent: #00d4aa;
+  --color-accent-50: #e6faf5;
+  --color-accent-100: #ccf5eb;
+  --color-accent-200: #99ebd7;
+  --color-accent-300: #66e0c3;
+  --color-accent-400: #33d6af;
+  --color-accent-500: #00cc9c;
+  --color-accent-600: #00d4aa;
+  --color-accent-700: #00b894;
+  --color-accent-800: #009c78;
+  --color-accent-900: #00805d;
+
+  --color-neutral: #1a1a2e;
+  --color-neutral-50: #f5f5f7;
+  --color-neutral-100: #ebebef;
+  --color-neutral-200: #d8d8e0;
+  --color-neutral-300: #b8b8c2;
+  --color-neutral-400: #8e8e9a;
+  --color-neutral-500: #6b6b78;
+  --color-neutral-600: #4d4d58;
+  --color-neutral-700: #36363f;
+  --color-neutral-800: #1a1a2e;
+  --color-neutral-900: #0d0d17;
+
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
+  --radius-brand: 9999px;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+
+  --shadow-brand: 0 4px 20px rgba(108, 59, 255, 0.25);
+  --shadow-brand-lg: 0 8px 30px rgba(108, 59, 255, 0.35);
+  --shadow-brand-sm: 0 2px 10px rgba(108, 59, 255, 0.15);
+  --shadow-secondary: 0 4px 20px rgba(255, 107, 107, 0.25);
+  --shadow-accent: 0 4px 20px rgba(0, 212, 170, 0.25);
+
+  --spacing-18: 4.5rem;
+  --spacing-22: 5.5rem;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Inter", system-ui, sans-serif;
+
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-bounce-subtle: bounce 2s infinite;
+}
+
+[data-theme="nexus"] {
+  --color-primary: #6c3bff;
+  --color-primary-content: #ffffff;
+  --color-secondary: #ff6b6b;
+  --color-secondary-content: #ffffff;
+  --color-accent: #00d4aa;
+  --color-accent-content: #ffffff;
+  --color-neutral: #1a1a2e;
+  --color-neutral-content: #ffffff;
+  --color-base-100: #ffffff;
+  --color-base-200: #f5f5f7;
+  --color-base-300: #ebebef;
+  --color-base-content: #1a1a2e;
+  --color-success: #22c55e;
+  --color-success-content: #ffffff;
+  --color-warning: #f59e0b;
+  --color-warning-content: #1a1a2e;
+  --color-error: #ef4444;
+  --color-error-content: #ffffff;
+  --color-info: #3b82f6;
+  --color-info-content: #ffffff;
+}

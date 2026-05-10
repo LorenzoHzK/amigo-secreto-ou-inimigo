@@ -9,7 +9,9 @@
   "scripts": {
     "dev:web": "npm run start -w apps/web",
     "build:web": "npm run build -w apps/web",
-    "test:web": "npm run test -w apps/web"
+    "test:web": "npm run test -w apps/web",
+    "lint:web": "npm run lint -w apps/web",
+    "format": "prettier --write ."
   },
   "keywords": [
     "angular",
@@ -17,5 +19,11 @@
     "monorepo"
   ],
   "author": "Matheus Lorenz e Eduardo",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.8.0"
+  }
 }
