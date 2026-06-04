@@ -1,211 +1,24 @@
-<div
-  class="bg-base-100 flex min-h-screen flex-col items-center justify-center gap-8 p-8"
->
-  <!-- Título centralizado -->
-  <h1 class="text-primary text-center text-4xl font-bold tracking-tight">
-    🚀 Nexus Design System
-  </h1>
+<div class="min-h-screen flex flex-col bg-base-100 text-base-content">
+  <div class="drawer flex-grow">
+    <input id="app-drawer" type="checkbox" class="drawer-toggle" />
 
-  <p class="text-neutral max-w-md text-center text-lg opacity-60">
-    Demonstração dos Design Tokens e componentes com DaisyUI + Tailwind CSS
-  </p>
+    <div class="drawer-content min-h-screen flex flex-col">
+      <app-header />
 
-  <!-- Seção: Botões -->
-  <div class="flex w-full max-w-2xl flex-col gap-6">
-    <h2 class="text-neutral text-center text-xl font-semibold">Botões</h2>
-    <div class="flex flex-row flex-wrap justify-center gap-4">
-      <button class="btn btn-primary rounded-brand shadow-brand px-8">
-        Principal
-      </button>
-      <button class="btn btn-secondary rounded-brand shadow-secondary px-8">
-        Secundário
-      </button>
-      <button
-        class="btn btn-accent btn-outline rounded-brand shadow-accent px-8"
-      >
-        Destaque
-      </button>
-      <button class="btn-neutral rounded-brand btn px-8">Neutral</button>
+      <main class="flex-grow w-full">
+        <router-outlet />
+      </main>
+
+      <app-footer />
     </div>
-  </div>
 
-  <!-- Seção: Cores Primary -->
-  <div class="flex w-full max-w-2xl flex-col gap-4">
-    <h2 class="text-neutral text-center text-xl font-semibold">
-      Paleta Primary
-    </h2>
-    <div class="flex flex-wrap justify-center gap-2">
-      <div
-        class="bg-primary-50 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        50
-      </div>
-      <div
-        class="bg-primary-100 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        100
-      </div>
-      <div
-        class="bg-primary-200 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        200
-      </div>
-      <div
-        class="bg-primary-300 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        300
-      </div>
-      <div
-        class="bg-primary-400 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        400
-      </div>
-      <div
-        class="bg-primary-500 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        500
-      </div>
-      <div
-        class="bg-primary-600 flex h-16 w-16 items-center justify-center rounded-xl text-xs text-white"
-      >
-        600
-      </div>
-      <div
-        class="bg-primary-700 flex h-16 w-16 items-center justify-center rounded-xl text-xs text-white"
-      >
-        700
-      </div>
-      <div
-        class="bg-primary-800 flex h-16 w-16 items-center justify-center rounded-xl text-xs text-white"
-      >
-        800
-      </div>
-      <div
-        class="bg-primary-900 flex h-16 w-16 items-center justify-center rounded-xl text-xs text-white"
-      >
-        900
-      </div>
-    </div>
-  </div>
-
-  <!-- Seção: Cores Secondary -->
-  <div class="flex w-full max-w-2xl flex-col gap-4">
-    <h2 class="text-neutral text-center text-xl font-semibold">
-      Paleta Secondary
-    </h2>
-    <div class="flex flex-wrap justify-center gap-2">
-      <div
-        class="bg-secondary-50 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        50
-      </div>
-      <div
-        class="bg-secondary-100 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        100
-      </div>
-      <div
-        class="bg-secondary-200 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        200
-      </div>
-      <div
-        class="bg-secondary-300 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        300
-      </div>
-      <div
-        class="bg-secondary-400 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        400
-      </div>
-      <div
-        class="bg-secondary-500 flex h-16 w-16 items-center justify-center rounded-xl text-xs"
-      >
-        500
-      </div>
-      <div
-        class="bg-secondary-600 flex h-16 w-16 items-center justify-center rounded-xl text-xs text-white"
-      >
-        600
-      </div>
-      <div
-        class="bg-secondary-700 flex h-16 w-16 items-center justify-center rounded-xl text-xs text-white"
-      >
-        700
-      </div>
-      <div
-        class="bg-secondary-800 flex h-16 w-16 items-center justify-center rounded-xl text-xs text-white"
-      >
-        800
-      </div>
-      <div
-        class="bg-secondary-900 flex h-16 w-16 items-center justify-center rounded-xl text-xs text-white"
-      >
-        900
-      </div>
-    </div>
-  </div>
-
-  <!-- Seção: Estados -->
-  <div class="flex w-full max-w-2xl flex-col gap-4">
-    <h2 class="text-neutral text-center text-xl font-semibold">Estados</h2>
-    <div class="flex flex-wrap justify-center gap-4">
-      <button class="btn btn-success rounded-brand px-8">Success</button>
-      <button class="btn btn-warning rounded-brand px-8">Warning</button>
-      <button class="btn btn-error rounded-brand px-8">Error</button>
-      <button class="btn btn-info rounded-brand px-8">Info</button>
-    </div>
-  </div>
-
-  <!-- Seção: Inputs -->
-  <div class="flex w-full max-w-2xl flex-col gap-4">
-    <h2 class="text-neutral text-center text-xl font-semibold">Inputs</h2>
-    <div class="flex flex-wrap items-end justify-center gap-4">
-      <input
-        type="text"
-        placeholder="Input padrão"
-        class="input input-bordered rounded-brand w-full max-w-xs"
-      />
-      <input
-        type="text"
-        placeholder="Input primary"
-        class="input input-primary rounded-brand w-full max-w-xs"
-      />
-      <input
-        type="text"
-        placeholder="Input secondary"
-        class="input input-secondary rounded-brand w-full max-w-xs"
-      />
-    </div>
-  </div>
-
-  <!-- Seção: Cards -->
-  <div class="flex w-full max-w-2xl flex-col gap-4">
-    <h2 class="text-neutral text-center text-xl font-semibold">Cards</h2>
-    <div class="flex flex-wrap justify-center gap-4">
-      <div class="card bg-base-200 shadow-brand w-64">
-        <div class="card-body">
-          <h3 class="card-title text-primary">Card Primary</h3>
-          <p class="text-neutral opacity-70">
-            Exemplo de card com sombra brand.
-          </p>
-          <div class="card-actions justify-end">
-            <button class="btn btn-primary btn-sm rounded-brand">Ação</button>
-          </div>
-        </div>
-      </div>
-      <div class="card bg-base-200 shadow-secondary w-64">
-        <div class="card-body">
-          <h3 class="card-title text-secondary">Card Secondary</h3>
-          <p class="text-neutral opacity-70">
-            Exemplo de card com sombra secondary.
-          </p>
-          <div class="card-actions justify-end">
-            <button class="btn btn-secondary btn-sm rounded-brand">Ação</button>
-          </div>
-        </div>
-      </div>
+    <div class="drawer-side z-50 lg:hidden">
+      <label
+        for="app-drawer"
+        aria-label="Fechar menu"
+        class="drawer-overlay"
+      ></label>
+      <app-sidenav />
     </div>
   </div>
 </div>
