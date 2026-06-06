@@ -4,14 +4,16 @@
   "description": "Monorepo do projeto da disciplina",
   "private": true,
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "libs/*"
   ],
   "scripts": {
+    "dev:api": "echo 'Backend não configurado. Rode o Workflow 2.'",
     "dev:web": "npm run start -w apps/web",
     "build:web": "npm run build -w apps/web",
     "test:web": "npm run test -w apps/web",
     "lint:web": "npm run lint -w apps/web",
-    "format": "prettier --write ."
+    "format": "prettier --write \"**/*.{ts,js,json,css,scss,md}\""
   },
   "keywords": [
     "angular",
