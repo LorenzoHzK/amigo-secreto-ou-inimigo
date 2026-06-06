@@ -95,9 +95,9 @@ export interface Group {
   created_at: string;
 }
 
-export type CreateGroupPayload = Pick<Group, "name" | "price_limit">;
+export type CreateGroupPayload = Pick<Group, 'name' | 'price_limit'>;
 
-export type GroupPublicView = Pick<Group, "id" | "name" | "price_limit" | "drawn_at">;
+export type GroupPublicView = Pick<Group, 'id' | 'name' | 'price_limit' | 'drawn_at'>;
 ```
 
 ```typescript
@@ -117,7 +117,7 @@ export type JoinGroupPayload = {
   name: string;
 };
 
-export type ParticipantPublicView = Pick<Participant, "id" | "name">;
+export type ParticipantPublicView = Pick<Participant, 'id' | 'name'>;
 
 export interface DrawResult {
   participant: ParticipantPublicView;
