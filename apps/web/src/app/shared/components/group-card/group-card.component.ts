@@ -99,8 +99,13 @@ export class GroupCardComponent {
   priceRange = input.required<string>();
   actionLabel = input.required<string>();
   avatars = input<GroupCardAvatar[]>([]);
+  routeUrl = input<string>('');
 
   openGroupAction(): void {
+    if (this.routeUrl()) {
+      void this.router.navigateByUrl(this.routeUrl());
+      return;
+    }
     const label = this.actionLabel().toLowerCase();
     const target = label.includes('revelar') ? '/revelar/demo' : '/admin/demo';
     void this.router.navigateByUrl(target);

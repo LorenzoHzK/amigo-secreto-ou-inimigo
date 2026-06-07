@@ -15,6 +15,7 @@ export interface DesktopGroupCard {
   value: string;
   action: string;
   avatars: string[];
+  actionUrl?: string;
 }
 
 @Component({
@@ -71,7 +72,7 @@ export interface DesktopGroupCard {
             <button
               type="button"
               class="bg-primary shadow-brand hover:bg-primary-700 focus:ring-primary-300 rounded-full px-5 py-3 text-sm font-extrabold text-white transition focus:ring-2 focus:outline-none active:scale-[0.98]"
-              (click)="openGroup(group.action)"
+              (click)="openGroup(group)"
             >
               {{ group.action }}
             </button>
@@ -85,8 +86,12 @@ export class GroupGridComponent {
   private readonly router = inject(Router);
   groups = input.required<DesktopGroupCard[]>();
 
-  openGroup(action: string): void {
-    const target = action.toLowerCase().includes('revelar')
+  openGroup(group: DesktopGroupCard): void {
+    if (group.actionUrl) {
+      void this.router.navigateByUrl(group.actionUrl);
+      return;
+    }
+    const target = group.action.toLowerCase().includes('revelar')
       ? '/revelar/demo'
       : '/admin/demo';
     void this.router.navigateByUrl(target);

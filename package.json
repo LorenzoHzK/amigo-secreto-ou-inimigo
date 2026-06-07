@@ -12,6 +12,7 @@
     "build:web": "npm run build -w apps/web",
     "test:web": "npm run test -w apps/web",
     "lint:web": "npm run lint -w apps/web",
+    "mock:api": "npm run mock:api -w apps/web",
     "format": "prettier --write ."
   },
   "keywords": [

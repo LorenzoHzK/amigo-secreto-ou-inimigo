@@ -9,6 +9,7 @@ import { Router } from '@angular/router';
 import { MobileShellComponent } from '../../shared/components/mobile-shell/mobile-shell.component';
 import { DesktopLayoutComponent } from '../../shared/layouts/desktop-layout/desktop-layout.component';
 import { TextFieldComponent } from '../../shared/components/text-field/text-field.component';
+import { GroupService } from '../../core/services/group.service';
 
 @Component({
   selector: 'app-create-group-page',
@@ -236,6 +237,7 @@ import { TextFieldComponent } from '../../shared/components/text-field/text-fiel
 })
 export class CreateGroupPage {
   private readonly router = inject(Router);
+  private readonly groupService = inject(GroupService);
   readonly selectedOption = signal<'date' | 'privacy' | null>(null);
   readonly groupName = model<string>('');
   readonly priceLimit = model<string>('');
@@ -246,9 +248,47 @@ export class CreateGroupPage {
     this.selectedOption.set(option);
   }
 
-  createGroup(): void {
-    this.createLabel.set('Grupo criado ✓');
-    setTimeout(() => void this.router.navigateByUrl('/admin/demo'), 450);
+  async createGroup(): Promise<void> {
+    const name = this.groupName().trim();
+    if (!name) {
+      alert('Por favor, informe o nome do grupo.');
+      return;
+    }
+
+    const price = this.priceLimit()
+      ? parseFloat(this.priceLimit().replace(',', '.'))
+      : null;
+
+    this.createLabel.set('Criando...');
+    try {
+      const group = await this.groupService.createGroup(
+        name,
+        isNaN(price as number) ? null : price,
+      );
+
+      let storedAdmin: string[] = [];
+      try {
+        storedAdmin = JSON.parse(
+          localStorage.getItem('my_admin_tokens') || '[]',
+        );
+      } catch {
+        storedAdmin = [];
+      }
+      if (!storedAdmin.includes(group.admin_token)) {
+        storedAdmin.push(group.admin_token);
+        localStorage.setItem('my_admin_tokens', JSON.stringify(storedAdmin));
+      }
+
+      this.createLabel.set('Grupo criado ✓');
+      setTimeout(
+        () => void this.router.navigateByUrl(`/admin/${group.admin_token}`),
+        450,
+      );
+    } catch (err) {
+      console.error(err);
+      this.createLabel.set('Erro ao criar ❌');
+      setTimeout(() => this.createLabel.set('Criar grupo 🎉'), 2000);
+    }
   }
 
   goBack(): void {

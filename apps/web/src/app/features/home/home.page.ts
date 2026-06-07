@@ -55,7 +55,7 @@ import { MobileShellComponent } from '../../shared/components/mobile-shell/mobil
               class="relative grid size-40 place-items-center rounded-[2.6rem] bg-white shadow-[0_28px_60px_rgba(108,59,255,0.18)]"
             >
               <div
-                class="from-primary to-secondary shadow-brand-lg grid size-28 place-items-center rounded-[2rem] bg-gradient-to-br text-6xl"
+                class="from-primary to-secondary shadow-brand-lg grid size-28 place-items-center rounded-[2rem] bg-linear-to-br text-6xl"
                 aria-hidden="true"
               >
                 🎁
@@ -116,7 +116,7 @@ import { MobileShellComponent } from '../../shared/components/mobile-shell/mobil
             Criar grupo
           </a>
           <a
-            routerLink="/revelar/demo"
+            routerLink="/revelar/alex-personal-token"
             class="text-neutral hover:border-primary-200 hover:text-primary focus:ring-primary-300 rounded-full border border-[#ececf3] bg-white px-8 py-4 text-base font-extrabold shadow-sm transition focus:ring-2 focus:outline-none"
           >
             Ver demonstração
@@ -176,7 +176,7 @@ import { MobileShellComponent } from '../../shared/components/mobile-shell/mobil
         class="mt-20 grid grid-cols-[1fr_0.9fr] items-center gap-12"
       >
         <div
-          class="from-primary-100 to-secondary-100 relative min-h-[430px] overflow-hidden rounded-[2.5rem] bg-gradient-to-br via-white p-8 shadow-[0_24px_70px_rgba(108,59,255,0.14)]"
+          class="from-primary-100 to-secondary-100 relative min-h-[430px] overflow-hidden rounded-[2.5rem] bg-linear-to-br via-white p-8 shadow-[0_24px_70px_rgba(108,59,255,0.14)]"
         >
           <div
             class="absolute top-10 left-10 grid size-44 place-items-center rounded-[2.5rem] bg-white text-7xl shadow-2xl"

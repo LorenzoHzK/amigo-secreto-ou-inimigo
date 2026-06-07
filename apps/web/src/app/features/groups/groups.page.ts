@@ -1,7 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  effect,
+  OnInit,
   inject,
   signal,
 } from '@angular/core';
@@ -20,7 +20,8 @@ import {
   DesktopGroupCard,
   GroupGridComponent,
 } from '../../shared/components/group-grid/group-grid.component';
-import { GroupDemoService } from '../../core/services/group-demo.service';
+import { GroupService } from '../../core/services/group.service';
+import { ParticipantService } from '../../core/services/participant.service';
 
 interface GroupMock {
   type: string;
@@ -31,6 +32,7 @@ interface GroupMock {
   priceRange: string;
   actionLabel: string;
   avatars: GroupCardAvatar[];
+  routeUrl: string;
 }
 
 @Component({
@@ -79,17 +81,37 @@ interface GroupMock {
           </p>
         </section>
 
-        @for (group of groups(); track group.title) {
-          <app-group-card
-            [type]="group.type"
-            [status]="group.status"
-            [statusClass]="group.statusClass"
-            [title]="group.title"
-            [date]="group.date"
-            [priceRange]="group.priceRange"
-            [actionLabel]="group.actionLabel"
-            [avatars]="group.avatars"
-          />
+        @if (isLoading()) {
+          <div
+            class="flex flex-col items-center justify-center py-10 text-neutral-400"
+          >
+            <span
+              class="loading loading-spinner loading-lg text-primary"
+            ></span>
+            <p class="mt-4 text-sm font-bold">Buscando seus grupos...</p>
+          </div>
+        } @else {
+          @for (group of groups(); track group.title) {
+            <app-group-card
+              [type]="group.type"
+              [status]="group.status"
+              [statusClass]="group.statusClass"
+              [title]="group.title"
+              [date]="group.date"
+              [priceRange]="group.priceRange"
+              [actionLabel]="group.actionLabel"
+              [avatars]="group.avatars"
+              [routeUrl]="group.routeUrl"
+            />
+          } @empty {
+            <div
+              class="rounded-[2rem] bg-white p-8 text-center shadow-[0_18px_45px_rgba(26,26,46,0.07)]"
+            >
+              <p class="text-sm font-bold text-neutral-400">
+                Você não participa de nenhum grupo ainda.
+              </p>
+            </div>
+          }
         }
 
         <button
@@ -128,7 +150,29 @@ interface GroupMock {
       </header>
 
       <section class="mt-10">
-        <app-group-grid [groups]="desktopGroups" />
+        @if (isLoading()) {
+          <div
+            class="flex flex-col items-center justify-center py-20 text-neutral-400"
+          >
+            <span
+              class="loading loading-spinner loading-lg text-primary"
+            ></span>
+            <p class="mt-4 text-sm font-bold">Buscando seus grupos...</p>
+          </div>
+        } @else {
+          @if (desktopGroups().length > 0) {
+            <app-group-grid [groups]="desktopGroups()" />
+          } @else {
+            <div
+              class="rounded-[2rem] bg-white p-12 text-center shadow-[0_18px_45px_rgba(26,26,46,0.07)]"
+            >
+              <p class="text-base font-bold text-neutral-400">
+                Você não participa de nenhum grupo ainda.
+              </p>
+            </div>
+          }
+        }
+
         <button
           type="button"
           class="border-primary-200 text-primary focus:ring-primary-300 mt-6 flex min-h-44 w-full items-center justify-center gap-4 rounded-[2rem] border-2 border-dashed bg-white/70 transition hover:bg-white focus:ring-2 focus:outline-none active:scale-[0.98]"
@@ -179,51 +223,164 @@ interface GroupMock {
     </app-dashboard-shell>
   `,
 })
-export class GroupsPage {
+export class GroupsPage implements OnInit {
   private readonly router = inject(Router);
-  readonly demoService = inject(GroupDemoService);
+  private readonly groupService = inject(GroupService);
+  private readonly participantService = inject(ParticipantService);
+
   readonly enemyLabel = signal<string>('Descubra Inimigo');
   readonly rulesLabel = signal<string>('Ver Regras');
 
-  constructor() {
-    effect(() => {
-      localStorage.setItem(
-        'demo-total-participants',
-        String(this.demoService.totalParticipants()),
-      );
-    });
-    void this.demoService.loadGroups();
+  readonly groups = signal<GroupMock[]>([]);
+  readonly desktopGroups = signal<DesktopGroupCard[]>([]);
+  readonly isLoading = signal<boolean>(true);
+
+  ngOnInit(): void {
+    void this.loadGroups();
   }
 
-  readonly desktopGroups: DesktopGroupCard[] = [
-    {
-      name: 'Natal da Família Silva',
-      status: 'Sorteado',
-      statusClass: 'bg-accent',
-      participants: '12 participantes confirmados',
-      value: 'R$ 50 - R$ 100',
-      action: 'Revelar',
-      avatars: ['AS', 'MR', 'SJ'],
-    },
-    {
-      name: 'Amigos da Firma',
-      status: 'Pendente',
-      statusClass: 'bg-warning',
-      participants: '8 participantes convidados',
-      value: 'Até R$ 50',
-      action: 'Detalhes',
-      avatars: ['MC', 'LR', 'DT'],
-    },
-    {
-      name: 'Curadoria Digital',
-      status: 'Aberto',
-      statusClass: 'bg-primary',
-      participants: '5 participantes ativos',
-      value: 'R$ 80 - R$ 150',
-      action: 'Gerenciar',
-      avatars: ['LS', 'SB', 'AR'],
-    },
-  ];
+  async loadGroups(): Promise<void> {
+    this.isLoading.set(true);
+    try {
+      let storedAdmin: string[] = [];
+      let storedPersonal: string[] = [];
+      try {
+        storedAdmin = JSON.parse(
+          localStorage.getItem('my_admin_tokens') || '[]',
+        );
+        storedPersonal = JSON.parse(
+          localStorage.getItem('my_personal_tokens') || '[]',
+        );
+      } catch {
+        // Ignorar erro de parsing
+      }
+
+      // Seed de demonstração inicial se ambos estiverem vazios
+      if (storedAdmin.length === 0 && storedPersonal.length === 0) {
+        storedAdmin = ['natal-silva-admin-token', 'firma-admin-token'];
+        storedPersonal = ['alex-personal-token'];
+        localStorage.setItem('my_admin_tokens', JSON.stringify(storedAdmin));
+        localStorage.setItem(
+          'my_personal_tokens',
+          JSON.stringify(storedPersonal),
+        );
+      }
+
+      const cards: GroupMock[] = [];
+      const dCards: DesktopGroupCard[] = [];
+
+      // Carregar grupos onde o usuário é organizador
+      for (const token of storedAdmin) {
+        const group = await this.groupService.getGroupByAdminToken(token);
+        if (!group) continue;
+
+        const participants =
+          await this.participantService.getParticipantsByGroupId(group.id);
+        const initialsList = participants
+          .slice(0, 3)
+          .map((p) => this.getInitials(p.name));
+        const statusStr = group.drawn_at ? 'Sorteado' : 'Aberto';
+        const statusClass = group.drawn_at
+          ? 'border-accent-100 bg-accent-50 text-accent-800'
+          : 'border-primary-100 bg-primary-50 text-primary-800';
+
+        const priceLimit = group.price_limit;
+        const priceStr = priceLimit
+          ? `Limite: R$ ${priceLimit}`
+          : 'Sem limite de preço';
+
+        cards.push({
+          type: 'Organizador',
+          status: statusStr,
+          statusClass,
+          title: group.name,
+          date: group.drawn_at ? 'Sorteio realizado' : 'Aguardando sorteio',
+          priceRange: priceStr,
+          actionLabel: 'Gerenciar',
+          avatars: initialsList.map((init) => ({ initials: init })),
+          routeUrl: `/admin/${group.admin_token}`,
+        });
+
+        dCards.push({
+          name: group.name,
+          status: statusStr,
+          statusClass: group.drawn_at ? 'bg-accent' : 'bg-primary',
+          participants: `${participants.length} participantes`,
+          value: priceStr,
+          action: 'Gerenciar',
+          avatars: initialsList,
+          actionUrl: `/admin/${group.admin_token}`,
+        });
+      }
+
+      // Carregar grupos onde o usuário é participante
+      for (const token of storedPersonal) {
+        const p =
+          await this.participantService.getParticipantByPersonalToken(token);
+        if (!p) continue;
+
+        const group = await this.groupService.getGroupById(p.group_id);
+        if (!group) continue;
+
+        // Se o usuário também for organizador deste grupo, dar prioridade ao Organizador
+        if (cards.some((c) => c.routeUrl.includes(group.admin_token))) {
+          continue;
+        }
+
+        const participants =
+          await this.participantService.getParticipantsByGroupId(group.id);
+        const initialsList = participants
+          .slice(0, 3)
+          .map((pt) => this.getInitials(pt.name));
+        const statusStr = group.drawn_at ? 'Sorteado' : 'Aberto';
+        const statusClass = group.drawn_at
+          ? 'border-accent-100 bg-accent-50 text-accent-800'
+          : 'border-primary-100 bg-primary-50 text-primary-800';
+
+        const priceLimit = group.price_limit;
+        const priceStr = priceLimit
+          ? `Limite: R$ ${priceLimit}`
+          : 'Sem limite de preço';
+
+        cards.push({
+          type: 'Participante',
+          status: statusStr,
+          statusClass,
+          title: group.name,
+          date: group.drawn_at ? 'Sorteio realizado' : 'Aguardando sorteio',
+          priceRange: priceStr,
+          actionLabel: group.drawn_at ? 'Revelar Amigo' : 'Ver Detalhes',
+          avatars: initialsList.map((init) => ({ initials: init })),
+          routeUrl: `/revelar/${p.personal_token}`,
+        });
+
+        dCards.push({
+          name: group.name,
+          status: statusStr,
+          statusClass: group.drawn_at ? 'bg-accent' : 'bg-primary',
+          participants: `${participants.length} participantes`,
+          value: priceStr,
+          action: group.drawn_at ? 'Revelar' : 'Detalhes',
+          avatars: initialsList,
+          actionUrl: `/revelar/${p.personal_token}`,
+        });
+      }
+
+      this.groups.set(cards);
+      this.desktopGroups.set(dCards);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 0 || !parts[0]) return '';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
 
   goToCreate(): void {
     void this.router.navigateByUrl('/criar');
@@ -237,27 +394,4 @@ export class GroupsPage {
     this.rulesLabel.set('Sem presentes óbvios ✓');
     setTimeout(() => this.rulesLabel.set('Ver Regras'), 2200);
   }
-
-  readonly groups = signal<GroupMock[]>([
-    {
-      type: 'Amigo Secreto',
-      status: 'Sorteado',
-      statusClass: 'border-accent-100 bg-accent-50 text-accent-800',
-      title: 'Natal da Família Silva',
-      date: '25 de Dezembro',
-      priceRange: 'R$ 50 - R$ 100',
-      actionLabel: 'Revelar Amigo',
-      avatars: [{ initials: 'AS' }, { initials: 'MR' }, { initials: 'SJ' }],
-    },
-    {
-      type: 'Happy Hour',
-      status: 'Pendente',
-      statusClass: 'border-warning/20 bg-warning/10 text-warning',
-      title: 'Amigos da Firma',
-      date: 'Sorteio em 20 de Dezembro',
-      priceRange: 'Até R$ 50',
-      actionLabel: 'Ver Detalhes',
-      avatars: [{ initials: 'MC' }, { initials: 'LR' }],
-    },
-  ]);
 }

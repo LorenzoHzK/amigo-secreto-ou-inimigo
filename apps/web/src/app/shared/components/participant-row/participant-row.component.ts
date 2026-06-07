@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   input,
+  output,
   signal,
 } from '@angular/core';
 import { AppAvatarComponent } from '../app-avatar/app-avatar.component';
@@ -28,7 +29,7 @@ import { AppAvatarComponent } from '../app-avatar/app-avatar.component';
         type="button"
         class="hover:bg-secondary-50 hover:text-secondary focus:ring-secondary-200 grid size-9 place-items-center rounded-full bg-neutral-50 text-neutral-400 transition focus:ring-2 focus:outline-none"
         [attr.aria-label]="'Remover ' + name()"
-        (click)="markRemoved()"
+        (click)="onRemoveClick()"
       >
         <svg
           class="size-4"
@@ -51,9 +52,10 @@ import { AppAvatarComponent } from '../app-avatar/app-avatar.component';
 export class ParticipantRowComponent {
   name = input.required<string>();
   initials = input.required<string>();
+  readonly remove = output<void>();
   readonly removed = signal<boolean>(false);
 
-  markRemoved(): void {
-    this.removed.update((value) => !value);
+  onRemoveClick(): void {
+    this.remove.emit();
   }
 }
