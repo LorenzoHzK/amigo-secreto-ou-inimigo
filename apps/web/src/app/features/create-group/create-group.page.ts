@@ -239,8 +239,8 @@ export class CreateGroupPage {
   private readonly router = inject(Router);
   private readonly groupService = inject(GroupService);
   readonly selectedOption = signal<'date' | 'privacy' | null>(null);
-  readonly groupName = model<string>('');
-  readonly priceLimit = model<string>('');
+  readonly groupName = signal<string>('');
+  readonly priceLimit = signal<string>('');
   readonly lastCommittedField = signal<string>('');
   readonly createLabel = signal<string>('Criar grupo 🎉');
 

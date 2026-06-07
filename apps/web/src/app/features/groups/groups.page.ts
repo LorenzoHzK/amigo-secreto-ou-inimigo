@@ -269,13 +269,49 @@ export class GroupsPage implements OnInit {
       const cards: GroupMock[] = [];
       const dCards: DesktopGroupCard[] = [];
 
-      // Carregar grupos onde o usuário é organizador
-      for (const token of storedAdmin) {
-        const group = await this.groupService.getGroupByAdminToken(token);
-        if (!group) continue;
+      // 1. Carregar grupos onde o usuário é organizador em paralelo
+      const adminGroupsResults = await Promise.all(
+        storedAdmin.map(async (token) => {
+          const group = await this.groupService.getGroupByAdminToken(token);
+          if (!group) return null;
+          const participants =
+            await this.participantService.getParticipantsByGroupId(group.id);
+          return { group, participants };
+        }),
+      );
 
-        const participants =
-          await this.participantService.getParticipantsByGroupId(group.id);
+      // Filtrar os nulos e registrar os IDs para evitar duplicidades
+      const validAdminGroups = adminGroupsResults.filter(
+        (r): r is { group: any; participants: any[] } => r !== null,
+      );
+      const adminGroupIds = new Set(validAdminGroups.map((r) => r.group.id));
+
+      // 2. Carregar participações em paralelo
+      const personalParticipantsResults = await Promise.all(
+        storedPersonal.map(async (token) => {
+          const p =
+            await this.participantService.getParticipantByPersonalToken(token);
+          if (!p) return null;
+
+          // Se já carregamos este grupo como administrador, não faz sentido buscar grupo/participantes novamente
+          if (adminGroupIds.has(p.group_id)) return null;
+
+          const group = await this.groupService.getGroupById(p.group_id);
+          if (!group) return null;
+
+          const participants =
+            await this.participantService.getParticipantsByGroupId(group.id);
+          return { participant: p, group, participants };
+        }),
+      );
+
+      const validPersonalGroups = personalParticipantsResults.filter(
+        (r): r is { participant: any; group: any; participants: any[] } =>
+          r !== null,
+      );
+
+      // Processar grupos de organizador
+      for (const { group, participants } of validAdminGroups) {
         const initialsList = participants
           .slice(0, 3)
           .map((p) => this.getInitials(p.name));
@@ -313,22 +349,8 @@ export class GroupsPage implements OnInit {
         });
       }
 
-      // Carregar grupos onde o usuário é participante
-      for (const token of storedPersonal) {
-        const p =
-          await this.participantService.getParticipantByPersonalToken(token);
-        if (!p) continue;
-
-        const group = await this.groupService.getGroupById(p.group_id);
-        if (!group) continue;
-
-        // Se o usuário também for organizador deste grupo, dar prioridade ao Organizador
-        if (cards.some((c) => c.routeUrl.includes(group.admin_token))) {
-          continue;
-        }
-
-        const participants =
-          await this.participantService.getParticipantsByGroupId(group.id);
+      // Processar grupos de participante
+      for (const { participant, group, participants } of validPersonalGroups) {
         const initialsList = participants
           .slice(0, 3)
           .map((pt) => this.getInitials(pt.name));
@@ -351,7 +373,7 @@ export class GroupsPage implements OnInit {
           priceRange: priceStr,
           actionLabel: group.drawn_at ? 'Revelar Amigo' : 'Ver Detalhes',
           avatars: initialsList.map((init) => ({ initials: init })),
-          routeUrl: `/revelar/${p.personal_token}`,
+          routeUrl: `/revelar/${participant.personal_token}`,
         });
 
         dCards.push({
@@ -362,7 +384,7 @@ export class GroupsPage implements OnInit {
           value: priceStr,
           action: group.drawn_at ? 'Revelar' : 'Detalhes',
           avatars: initialsList,
-          actionUrl: `/revelar/${p.personal_token}`,
+          actionUrl: `/revelar/${participant.personal_token}`,
         });
       }
 

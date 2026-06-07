@@ -249,7 +249,7 @@ export class JoinPage {
   readonly error = signal<string | null>(null);
 
   readonly joinLabel = signal<string>('Entrar no grupo →');
-  readonly participantName = model<string>('');
+  readonly participantName = signal<string>('');
   readonly lastCommittedName = signal<string>('');
 
   constructor() {
