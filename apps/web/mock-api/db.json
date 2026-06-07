@@ -1,0 +1,65 @@
+{
+  "groups": [
+    {
+      "id": "natal-silva-uuid",
+      "name": "Natal da Família Silva",
+      "admin_token": "natal-silva-admin-token",
+      "invite_token": "natal-silva-invite-token",
+      "price_limit": 100,
+      "drawn_at": "2026-06-07T14:36:19.138Z",
+      "created_at": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "firma-uuid",
+      "name": "Amigos da Firma",
+      "admin_token": "firma-admin-token",
+      "invite_token": "firma-invite-token",
+      "price_limit": 50,
+      "drawn_at": null,
+      "created_at": "2026-06-07T00:00:00.000Z"
+    }
+  ],
+  "participants": [
+    {
+      "id": "alex-uuid",
+      "group_id": "natal-silva-uuid",
+      "name": "Alex Rivera",
+      "personal_token": "alex-personal-token",
+      "drawn_participant_id": "sarah-uuid",
+      "created_at": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "marcus-uuid",
+      "group_id": "natal-silva-uuid",
+      "name": "Marcus Chen",
+      "personal_token": "marcus-personal-token",
+      "drawn_participant_id": "leo-uuid",
+      "created_at": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "sarah-uuid",
+      "group_id": "natal-silva-uuid",
+      "name": "Sarah Jenkins",
+      "personal_token": "sarah-personal-token",
+      "drawn_participant_id": "david-uuid",
+      "created_at": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "david-uuid",
+      "group_id": "natal-silva-uuid",
+      "name": "David Thorne",
+      "personal_token": "david-personal-token",
+      "drawn_participant_id": "alex-uuid",
+      "created_at": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "leo-uuid",
+      "group_id": "natal-silva-uuid",
+      "name": "Leo Rodriguez",
+      "personal_token": "leo-personal-token",
+      "drawn_participant_id": "marcus-uuid",
+      "created_at": "2026-06-07T00:00:00.000Z"
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
+}

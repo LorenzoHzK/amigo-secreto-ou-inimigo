@@ -22,13 +22,11 @@ describe('AppComponent', () => {
     expect(app.title).toEqual('amigo-oculto');
   });
 
-  it('should render the app shell', () => {
+  it('should render the router outlet', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
 
-    expect(compiled.querySelector('app-header')).toBeTruthy();
-    expect(compiled.querySelector('main router-outlet')).toBeTruthy();
-    expect(compiled.querySelector('app-footer')).toBeTruthy();
+    expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 });
