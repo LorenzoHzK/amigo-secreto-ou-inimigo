@@ -255,17 +255,6 @@ export class GroupsPage implements OnInit {
         // Ignorar erro de parsing
       }
 
-      // Seed de demonstração inicial se ambos estiverem vazios
-      if (storedAdmin.length === 0 && storedPersonal.length === 0) {
-        storedAdmin = ['natal-silva-admin-token', 'firma-admin-token'];
-        storedPersonal = ['alex-personal-token'];
-        localStorage.setItem('my_admin_tokens', JSON.stringify(storedAdmin));
-        localStorage.setItem(
-          'my_personal_tokens',
-          JSON.stringify(storedPersonal),
-        );
-      }
-
       const cards: GroupMock[] = [];
       const dCards: DesktopGroupCard[] = [];
 

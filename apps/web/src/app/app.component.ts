@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { ApiErrorService } from './core/services/api-error.service';
 
 @Component({
   selector: 'app-root',
@@ -8,5 +9,11 @@ import { RouterOutlet } from '@angular/router';
   templateUrl: './app.component.html',
 })
 export class AppComponent {
-  title = 'amigo-oculto';
+  private readonly apiError = inject(ApiErrorService);
+
+  readonly error = this.apiError.message;
+
+  dismissError(): void {
+    this.apiError.clear();
+  }
 }

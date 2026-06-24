@@ -4,8 +4,9 @@ export interface Group {
   admin_token: string;
   invite_token: string;
   price_limit: number | null;
-  drawn_at: string | null; // ISO date string
-  created_at: string; // ISO date string
+  drawn_at: string | null;
+  created_at: string;
+  owner_id?: string | null;
 }
 
 export interface Participant {
@@ -14,5 +15,6 @@ export interface Participant {
   name: string;
   personal_token: string;
   drawn_participant_id: string | null;
-  created_at: string; // ISO date string
+  created_at: string;
+  owner_id?: string | null;
 }

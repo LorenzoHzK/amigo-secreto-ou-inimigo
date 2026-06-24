@@ -6,7 +6,7 @@
       "admin_token": "natal-silva-admin-token",
       "invite_token": "natal-silva-invite-token",
       "price_limit": 100,
-      "drawn_at": "2026-06-07T14:36:19.138Z",
+      "drawn_at": "2026-06-07T17:16:18.008Z",
       "created_at": "2026-06-07T00:00:00.000Z"
     },
     {
@@ -17,48 +17,96 @@
       "price_limit": 50,
       "drawn_at": null,
       "created_at": "2026-06-07T00:00:00.000Z"
+    },
+    {
+      "id": "f4Ahq5MOHO0",
+      "name": "123",
+      "admin_token": "76319bd5-57f2-45a6-8b07-0cee765ffd54",
+      "invite_token": "22bf3a03-ec75-46eb-ad14-99d05342fcb2",
+      "price_limit": 3,
+      "drawn_at": null,
+      "created_at": "2026-06-07T16:04:34.358Z"
+    },
+    {
+      "id": "0rGRbRiM3L4",
+      "name": "123",
+      "admin_token": "b85b8a55-6a46-4794-9194-6388752b67a3",
+      "invite_token": "2581f80e-ea9b-47aa-9660-cf4a3d4a2b9a",
+      "price_limit": 123,
+      "drawn_at": null,
+      "created_at": "2026-06-07T16:53:07.320Z"
+    },
+    {
+      "id": "DRJYNMOk63c",
+      "name": "123",
+      "admin_token": "ce047401-9ff9-4fdf-b7c5-98831c914fb4",
+      "invite_token": "93d84103-108b-4bec-9c59-b4c1e11b1f0d",
+      "price_limit": 123,
+      "drawn_at": null,
+      "created_at": "2026-06-07T16:56:30.184Z"
+    },
+    {
+      "id": "lFMdaA7Sqt4",
+      "name": "aaa",
+      "admin_token": "e7172683-f99f-405f-9bbc-30ed2b8965cc",
+      "invite_token": "e32f86d0-f5ec-4846-a0c1-03af370e41f9",
+      "price_limit": null,
+      "drawn_at": null,
+      "created_at": "2026-06-07T16:57:13.431Z"
+    },
+    {
+      "id": "5iMKN_uAZ5w",
+      "name": "123",
+      "admin_token": "10525895-82f0-4483-9308-e42cc125d3ce",
+      "invite_token": "60c4e76f-d7fe-4d18-8851-4ca667eb129b",
+      "price_limit": 3,
+      "drawn_at": null,
+      "created_at": "2026-06-07T17:00:30.095Z"
+    },
+    {
+      "id": "erN68CCcLnM",
+      "name": "123",
+      "admin_token": "af55910a-45b5-4f51-8856-4e3ac92a1390",
+      "invite_token": "8811f8c2-8791-4944-adc8-e088b1aa8afd",
+      "price_limit": 123,
+      "drawn_at": null,
+      "created_at": "2026-06-07T17:44:15.008Z"
+    },
+    {
+      "id": "Dt2O8uoUf88",
+      "name": "Festa",
+      "admin_token": "d6540957-0ee5-445a-811e-1c6d9d969cc0",
+      "invite_token": "61484e16-5752-420e-9d43-943d65037934",
+      "price_limit": 123,
+      "drawn_at": null,
+      "created_at": "2026-06-07T18:16:37.038Z"
+    },
+    {
+      "id": "pgc5ad3g2hs",
+      "name": "123",
+      "admin_token": "b312bf00-1160-4f13-83a0-cf408352eca7",
+      "invite_token": "de194188-6095-4203-ba02-9dcb4cce0c27",
+      "price_limit": 123,
+      "drawn_at": null,
+      "created_at": "2026-06-07T19:15:24.071Z"
     }
   ],
   "participants": [
     {
-      "id": "alex-uuid",
+      "id": "eAyQzH3BVZc",
       "group_id": "natal-silva-uuid",
-      "name": "Alex Rivera",
-      "personal_token": "alex-personal-token",
-      "drawn_participant_id": "sarah-uuid",
-      "created_at": "2026-06-07T00:00:00.000Z"
+      "name": "Matheus Lorenz",
+      "personal_token": "4a3d742c-d13f-4270-837d-403ecf11d052",
+      "drawn_participant_id": null,
+      "created_at": "2026-06-07T17:25:36.966Z"
     },
     {
-      "id": "marcus-uuid",
+      "id": "rnH6NWgrhh0",
       "group_id": "natal-silva-uuid",
-      "name": "Marcus Chen",
-      "personal_token": "marcus-personal-token",
-      "drawn_participant_id": "leo-uuid",
-      "created_at": "2026-06-07T00:00:00.000Z"
-    },
-    {
-      "id": "sarah-uuid",
-      "group_id": "natal-silva-uuid",
-      "name": "Sarah Jenkins",
-      "personal_token": "sarah-personal-token",
-      "drawn_participant_id": "david-uuid",
-      "created_at": "2026-06-07T00:00:00.000Z"
-    },
-    {
-      "id": "david-uuid",
-      "group_id": "natal-silva-uuid",
-      "name": "David Thorne",
-      "personal_token": "david-personal-token",
-      "drawn_participant_id": "alex-uuid",
-      "created_at": "2026-06-07T00:00:00.000Z"
-    },
-    {
-      "id": "leo-uuid",
-      "group_id": "natal-silva-uuid",
-      "name": "Leo Rodriguez",
-      "personal_token": "leo-personal-token",
-      "drawn_participant_id": "marcus-uuid",
-      "created_at": "2026-06-07T00:00:00.000Z"
+      "name": "123",
+      "personal_token": "15cf6ab0-9935-4f4e-9cd8-00c019130276",
+      "drawn_participant_id": null,
+      "created_at": "2026-06-07T19:10:39.438Z"
     }
   ]
 }
