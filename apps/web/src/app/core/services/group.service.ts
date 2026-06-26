@@ -48,8 +48,11 @@ export class GroupService {
       admin_token: crypto.randomUUID(),
       invite_token: crypto.randomUUID(),
       price_limit: priceLimit,
+      reveal_date: null,
+      status: 'open',
       drawn_at: null,
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     } satisfies Omit<Group, 'owner_id'>;
 
     return firstValueFrom(this.supabase.insertOne<Group>(this.table, newGroup));

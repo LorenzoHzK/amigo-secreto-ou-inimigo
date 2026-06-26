@@ -43,6 +43,7 @@ export class ParticipantService {
       name,
       personal_token: crypto.randomUUID(),
       drawn_participant_id: null,
+      revealed_at: null,
       created_at: new Date().toISOString(),
     } satisfies Omit<Participant, 'owner_id'>;
 

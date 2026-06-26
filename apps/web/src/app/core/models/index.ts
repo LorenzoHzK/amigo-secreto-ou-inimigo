@@ -1,13 +1,35 @@
+// ===== ENTIDADE: GROUP =====
+
+export type GroupStatus = 'open' | 'drawn' | 'archived';
+
 export interface Group {
   id: string;
   name: string;
   admin_token: string;
   invite_token: string;
   price_limit: number | null;
+  reveal_date: string | null;
+  status: GroupStatus;
   drawn_at: string | null;
   created_at: string;
-  owner_id?: string | null;
+  updated_at: string;
+  owner_id: string | null;
 }
+
+// Payload para criação — campos que o cliente envia
+export type CreateGroupPayload = {
+  name: string;
+  price_limit: number | null;
+  reveal_date: string | null;
+};
+
+// Visão pública do grupo (sem admin_token)
+export type GroupPublicView = Pick<
+  Group,
+  'id' | 'name' | 'price_limit' | 'reveal_date' | 'status' | 'drawn_at'
+>;
+
+// ===== ENTIDADE: PARTICIPANT =====
 
 export interface Participant {
   id: string;
@@ -15,6 +37,44 @@ export interface Participant {
   name: string;
   personal_token: string;
   drawn_participant_id: string | null;
+  revealed_at: string | null;
   created_at: string;
-  owner_id?: string | null;
+  owner_id: string | null;
+}
+
+// Payload para entrar no grupo
+export type JoinGroupPayload = {
+  group_id: string;
+  name: string;
+};
+
+// Visão pública de participante (sem drawn_participant_id)
+export type ParticipantPublicView = Pick<Participant, 'id' | 'name' | 'created_at'>;
+
+// ===== RESULTADO DA RPC get_my_draw =====
+
+export interface MyDrawResult {
+  participant: { id: string; name: string };
+  group: GroupPublicView;
+  drawn: { id: string; name: string } | null;
+}
+
+// ===== CONTEXTOS DE TOKEN =====
+
+export interface AdminTokenContext {
+  groupId: string;
+  adminToken: string;
+}
+
+export interface ParticipantTokenContext {
+  groupId: string;
+  personalToken: string;
+}
+
+// ===== RESULTADO DO SORTEIO (Edge Function) =====
+
+export interface DrawResponse {
+  drawn_at: string;
+  participant_count: number;
+  group_name: string;
 }
