@@ -22,7 +22,7 @@ import { DrawService } from '../../core/services/draw.service';
 import { ApiErrorService } from '../../core/services/api-error.service';
 import { AuthService } from '../../core/services/auth.service';
 import { InitialsPipe } from '../../shared/pipes/initials.pipe';
-import { Group, Participant } from '../../core/models';
+import { Group, ParticipantPublicView } from '../../core/models';
 
 @Component({
   selector: 'app-admin-page',
@@ -361,7 +361,10 @@ export class AdminPage {
   });
 
   // Resource dos participantes — reativa ao id do grupo
-  readonly participantsResource = resource<any[], { groupId: string | undefined }>({
+  readonly participantsResource = resource<
+    ParticipantPublicView[],
+    { groupId: string | undefined }
+  >({
     params: () => ({ groupId: this.groupResource.value()?.id }),
     loader: ({ params }) =>
       params.groupId
@@ -371,7 +374,9 @@ export class AdminPage {
 
   // Aliases para o template
   readonly group = computed<Group | null>(() => this.groupResource.value() ?? null);
-  readonly participants = computed<any[]>(() => this.participantsResource.value() ?? []);
+  readonly participants = computed<ParticipantPublicView[]>(
+    () => this.participantsResource.value() ?? [],
+  );
   readonly isLoading = computed(
     () => this.groupResource.isLoading() || this.participantsResource.isLoading(),
   );

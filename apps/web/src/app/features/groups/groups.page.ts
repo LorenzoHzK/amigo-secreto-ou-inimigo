@@ -26,6 +26,11 @@ import { ParticipantService } from '../../core/services/participant.service';
 import { RevealService } from '../../core/services/reveal.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ApiErrorService } from '../../core/services/api-error.service';
+import {
+  Group,
+  GroupPublicView,
+  ParticipantPublicView,
+} from '../../core/models';
 
 interface GroupMock {
   type: string;
@@ -349,7 +354,8 @@ export class GroupsPage implements OnInit {
 
     // Filtrar os nulos e registrar os IDs para evitar duplicidades
     const validAdminGroups = adminGroupsResults.filter(
-      (r): r is { group: any; participants: any[] } => r !== null,
+      (r): r is { group: Group; participants: ParticipantPublicView[] } =>
+        r !== null,
     );
     const adminGroupIds = new Set(validAdminGroups.map((r) => r.group.id));
 
@@ -371,8 +377,13 @@ export class GroupsPage implements OnInit {
     );
 
     const validPersonalGroups = personalParticipantsResults.filter(
-      (r): r is { token: string; group: any; participants: any[] } =>
-        r !== null,
+      (
+        r,
+      ): r is {
+        token: string;
+        group: GroupPublicView;
+        participants: ParticipantPublicView[];
+      } => r !== null,
     );
 
     // Processar grupos de organizador

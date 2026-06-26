@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { Participant } from '../models';
+import { Participant, ParticipantPublicView } from '../models';
 import { SupabaseRestService } from './supabase-rest.service';
 
 @Injectable({ providedIn: 'root' })
@@ -9,10 +9,11 @@ export class ParticipantService {
   private readonly table = 'participants';
   private readonly publicView = 'participants_public';
 
-  // Retorna any[] temporariamente para manter compatibilidade com componentes legados até a refatoração das páginas
-  async getParticipantsByGroupId(groupId: string): Promise<any[]> {
+  async getParticipantsByGroupId(
+    groupId: string,
+  ): Promise<ParticipantPublicView[]> {
     return firstValueFrom(
-      this.supabase.select<any>(this.publicView, {
+      this.supabase.select<ParticipantPublicView>(this.publicView, {
         filters: { group_id: groupId },
         order: 'created_at',
         ascending: true,
