@@ -97,6 +97,20 @@ npm run functions:serve -w apps/api
 ```
 Isso disponibilizará o endpoint localmente em `http://localhost:54321/functions/v1/perform-draw`.
 
+### Integração com IDE (VS Code Deno Setup)
+
+Para evitar erros de importação de URLs (ex: `https://esm.sh/...`) apontados pelo editor no código Deno, configure a extensão oficial do Deno no VS Code:
+
+1. Instale a extensão oficial **Deno** no VS Code.
+2. Ative-a localmente para a pasta `apps/api`. Crie o arquivo `.vscode/settings.json` na raiz ou configure-o com:
+   ```json
+   {
+     "deno.enablePaths": ["apps/api/supabase/functions"]
+   }
+   ```
+   Isso ativa o suporte do Deno apenas nos arquivos da Edge Function, prevenindo conflitos com o projeto Angular.
+
+
 ### Como testar localmente via `curl`
 ```bash
 curl -i --location --request POST 'http://localhost:54321/functions/v1/perform-draw' \
