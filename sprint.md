@@ -3249,15 +3249,15 @@ Adicionar após US-10:
 - [ ] S13.2 — DesktopHeader e HomePage corrigidos
 
 ### Fase 4 — Qualidade
-- [ ] S14.1 — AdminPage com `resource()`
-- [ ] S14.2 — RevealPage com `resource()`
-- [ ] S15.1 — Vitest configurado
-- [ ] S15.2 — Testes do DrawService
-- [ ] S15.3 — Testes dos Guards
-- [ ] S16.1 — `.env.example` e configuração de ambiente
-- [ ] S16.2 — PRD atualizado
-- [ ] S16.3 — SDD atualizado
-- [ ] S16.4 — README validado e atualizado
+- [x] S14.1 — AdminPage com `resource()`
+- [x] S14.2 — RevealPage com `resource()`
+- [x] S15.1 — Vitest configurado
+- [x] S15.2 — Testes do DrawService
+- [x] S15.3 — Testes dos Guards
+- [x] S16.1 — `.env.example` e configuração de ambiente
+- [x] S16.2 — PRD atualizado
+- [x] S16.3 — SDD atualizado
+- [x] S16.4 — README validado e atualizado
 
 ---
 
