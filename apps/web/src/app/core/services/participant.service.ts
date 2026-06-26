@@ -7,10 +7,12 @@ import { SupabaseRestService } from './supabase-rest.service';
 export class ParticipantService {
   private readonly supabase = inject(SupabaseRestService);
   private readonly table = 'participants';
+  private readonly publicView = 'participants_public';
 
-  async getParticipantsByGroupId(groupId: string): Promise<Participant[]> {
+  // Retorna any[] temporariamente para manter compatibilidade com componentes legados até a refatoração das páginas
+  async getParticipantsByGroupId(groupId: string): Promise<any[]> {
     return firstValueFrom(
-      this.supabase.select<Participant>(this.table, {
+      this.supabase.select<any>(this.publicView, {
         filters: { group_id: groupId },
         order: 'created_at',
         ascending: true,
@@ -18,24 +20,23 @@ export class ParticipantService {
     );
   }
 
-  async getParticipantByPersonalToken(
-    token: string,
-  ): Promise<Participant | null> {
+  async getParticipantByPersonalToken(token: string): Promise<any | null> {
     return firstValueFrom(
-      this.supabase.selectOne<Participant>(this.table, {
+      this.supabase.selectOne<any>(this.publicView, {
         filters: { personal_token: token },
       }),
     );
   }
 
-  async getParticipantById(id: string): Promise<Participant | null> {
+  async getParticipantById(id: string): Promise<any | null> {
     return firstValueFrom(
-      this.supabase.selectOne<Participant>(this.table, {
+      this.supabase.selectOne<any>(this.publicView, {
         filters: { id },
       }),
     );
   }
 
+  // INSERT ainda usa a tabela real
   async addParticipant(groupId: string, name: string): Promise<Participant> {
     const newParticipant = {
       id: crypto.randomUUID(),
@@ -45,7 +46,8 @@ export class ParticipantService {
       drawn_participant_id: null,
       revealed_at: null,
       created_at: new Date().toISOString(),
-    } satisfies Omit<Participant, 'owner_id'>;
+      owner_id: null,
+    };
 
     return firstValueFrom(
       this.supabase.insertOne<Participant>(this.table, newParticipant),
@@ -55,19 +57,6 @@ export class ParticipantService {
   async removeParticipant(participantId: string): Promise<void> {
     await firstValueFrom(
       this.supabase.deleteOne(this.table, { id: participantId }),
-    );
-  }
-
-  async updateParticipantDrawnId(
-    participantId: string,
-    drawnParticipantId: string | null,
-  ): Promise<Participant> {
-    return firstValueFrom(
-      this.supabase.updateOne<Participant>(
-        this.table,
-        { id: participantId },
-        { drawn_participant_id: drawnParticipantId },
-      ),
     );
   }
 }
