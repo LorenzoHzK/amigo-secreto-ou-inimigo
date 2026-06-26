@@ -1,19 +1,15 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { ApiErrorService } from './core/services/api-error.service';
+import { ToastComponent } from './shared/components/toast/toast.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
-  templateUrl: './app.component.html',
+  imports: [RouterOutlet, ToastComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <router-outlet />
+    <app-toast />
+  `,
 })
-export class AppComponent {
-  private readonly apiError = inject(ApiErrorService);
-
-  readonly error = this.apiError.message;
-
-  dismissError(): void {
-    this.apiError.clear();
-  }
-}
+export class AppComponent {}
