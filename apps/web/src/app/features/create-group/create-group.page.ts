@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 import { DesktopLayoutComponent } from '../../shared/layouts/desktop-layout/desktop-layout.component';
 import { MobileShellComponent } from '../../shared/components/mobile-shell/mobile-shell.component';
 import { GroupService } from '../../core/services/group.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-create-group-page',
@@ -139,6 +140,7 @@ import { GroupService } from '../../core/services/group.service';
 export class CreateGroupPage {
   private readonly router = inject(Router);
   private readonly groupService = inject(GroupService);
+  private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
   readonly isSubmitting = signal(false);
@@ -165,6 +167,8 @@ export class CreateGroupPage {
     const revealDateRaw = this.form.controls.revealDate.value;
     const revealDate = revealDateRaw ? new Date(revealDateRaw).toISOString() : null;
 
+    const userId = this.auth.user()?.id ?? null;
+
     this.isSubmitting.set(true);
     this.buttonLabel.set('Criando...');
 
@@ -173,6 +177,7 @@ export class CreateGroupPage {
         name,
         price_limit: price,
         reveal_date: revealDate,
+        owner_id: userId,
       });
 
       const storedAdmin = this.readTokenList('my_admin_tokens');

@@ -51,6 +51,7 @@ export class GroupService {
         name: payloadOrName,
         price_limit: priceLimit ?? null,
         reveal_date: null,
+        owner_id: null,
       };
     } else {
       payload = payloadOrName;
@@ -67,7 +68,7 @@ export class GroupService {
       drawn_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      owner_id: null,
+      owner_id: payload.owner_id ?? null,
     };
 
     return firstValueFrom(this.supabase.insertOne<Group>(this.table, newGroup));

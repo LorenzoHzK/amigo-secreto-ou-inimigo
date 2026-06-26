@@ -21,6 +21,7 @@ export type CreateGroupPayload = {
   name: string;
   price_limit: number | null;
   reveal_date: string | null;
+  owner_id?: string | null;
 };
 
 // Visão pública do grupo (sem admin_token)
