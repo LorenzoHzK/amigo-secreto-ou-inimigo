@@ -20,22 +20,6 @@ export class ParticipantService {
     );
   }
 
-  async getParticipantByPersonalToken(token: string): Promise<any | null> {
-    return firstValueFrom(
-      this.supabase.selectOne<any>(this.publicView, {
-        filters: { personal_token: token },
-      }),
-    );
-  }
-
-  async getParticipantById(id: string): Promise<any | null> {
-    return firstValueFrom(
-      this.supabase.selectOne<any>(this.publicView, {
-        filters: { id },
-      }),
-    );
-  }
-
   // INSERT ainda usa a tabela real
   async addParticipant(groupId: string, name: string): Promise<Participant> {
     const newParticipant = {

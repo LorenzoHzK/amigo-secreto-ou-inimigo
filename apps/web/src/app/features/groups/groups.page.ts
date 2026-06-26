@@ -23,6 +23,7 @@ import {
 } from '../../shared/components/group-grid/group-grid.component';
 import { GroupService } from '../../core/services/group.service';
 import { ParticipantService } from '../../core/services/participant.service';
+import { RevealService } from '../../core/services/reveal.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ApiErrorService } from '../../core/services/api-error.service';
 
@@ -230,6 +231,7 @@ export class GroupsPage implements OnInit {
   private readonly router = inject(Router);
   private readonly groupService = inject(GroupService);
   private readonly participantService = inject(ParticipantService);
+  private readonly revealService = inject(RevealService);
   private readonly auth = inject(AuthService);
   private readonly apiError = inject(ApiErrorService);
 
@@ -351,27 +353,25 @@ export class GroupsPage implements OnInit {
     );
     const adminGroupIds = new Set(validAdminGroups.map((r) => r.group.id));
 
-    // 2. Carregar participações em paralelo
+    // 2. Carregar participações em paralelo — via RPC segura get_my_draw,
+    //    que resolve participante + grupo a partir do personal_token sem
+    //    expor o token em nenhuma resposta de SELECT.
     const personalParticipantsResults = await Promise.all(
       storedPersonal.map(async (token) => {
-        const p =
-          await this.participantService.getParticipantByPersonalToken(token);
-        if (!p) return null;
+        const draw = await this.revealService.getMyDraw(token);
+        if (!draw) return null;
 
         // Se já carregamos este grupo como administrador, não faz sentido buscar grupo/participantes novamente
-        if (adminGroupIds.has(p.group_id)) return null;
-
-        const group = await this.groupService.getGroupById(p.group_id);
-        if (!group) return null;
+        if (adminGroupIds.has(draw.group.id)) return null;
 
         const participants =
-          await this.participantService.getParticipantsByGroupId(group.id);
-        return { participant: p, group, participants };
+          await this.participantService.getParticipantsByGroupId(draw.group.id);
+        return { token, group: draw.group, participants };
       }),
     );
 
     const validPersonalGroups = personalParticipantsResults.filter(
-      (r): r is { participant: any; group: any; participants: any[] } =>
+      (r): r is { token: string; group: any; participants: any[] } =>
         r !== null,
     );
 
@@ -415,7 +415,7 @@ export class GroupsPage implements OnInit {
     }
 
     // Processar grupos de participante
-    for (const { participant, group, participants } of validPersonalGroups) {
+    for (const { token, group, participants } of validPersonalGroups) {
       const initialsList = participants
         .slice(0, 3)
         .map((pt) => this.getInitials(pt.name));
@@ -438,7 +438,7 @@ export class GroupsPage implements OnInit {
         priceRange: priceStr,
         actionLabel: group.drawn_at ? 'Revelar Amigo' : 'Ver Detalhes',
         avatars: initialsList.map((init) => ({ initials: init })),
-        routeUrl: `/revelar/${participant.personal_token}`,
+        routeUrl: `/revelar/${token}`,
       });
 
       dCards.push({
@@ -449,7 +449,7 @@ export class GroupsPage implements OnInit {
         value: priceStr,
         action: group.drawn_at ? 'Revelar' : 'Detalhes',
         avatars: initialsList,
-        actionUrl: `/revelar/${participant.personal_token}`,
+        actionUrl: `/revelar/${token}`,
       });
     }
 
