@@ -427,14 +427,22 @@ export class AdminPage {
     const trimmed = name.trim();
     if (!trimmed) return;
     const g = this.group();
-    if (!g) return;
+    if (!g || this.isDrawn()) return;
+
+    const duplicate = this.participants().some(
+      (p) => p.name.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (duplicate) {
+      this.apiError.report(`"${trimmed}" já está na lista de participantes.`);
+      return;
+    }
 
     try {
       const newP = await this.participantService.addParticipant(g.id, trimmed);
       this.participants.update((prev) => [...prev, newP]);
     } catch (err) {
       console.error(err);
-      alert('Erro ao adicionar participante.');
+      this.apiError.report('Erro ao adicionar participante. Tente novamente.');
     }
   }
 
