@@ -1,14 +1,14 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { SUPABASE_URL } from '../tokens/supabase.tokens';
 
 export type SupabaseFilterValue = string | number | boolean | null;
 
 @Injectable({ providedIn: 'root' })
 export class SupabaseRestService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = environment.supabaseUrl.replace(/\/$/, '');
+  private readonly baseUrl = inject(SUPABASE_URL).replace(/\/$/, '');
 
   select<T>(
     table: string,
@@ -97,5 +97,12 @@ export class SupabaseRestService {
     }
 
     return this.http.delete<void>(`${this.baseUrl}/rest/v1/${table}`, { params });
+  }
+
+  rpc<T>(functionName: string, params: Record<string, unknown>): Observable<T> {
+    return this.http.post<T>(
+      `${this.baseUrl}/rest/v1/rpc/${functionName}`,
+      params,
+    );
   }
 }
