@@ -111,11 +111,15 @@ export class JoinPage {
         this.error.set('Link de convite inválido ou expirado.');
         return;
       }
+      if (group.status === 'drawn' || group.drawn_at !== null) {
+        this.error.set('Este grupo já realizou o sorteio. Não é possível entrar agora.');
+        return;
+      }
 
       this.group.set(group);
     } catch (error) {
       console.error(error);
-      this.error.set('Erro ao carregar o grupo.');
+      this.error.set('Erro ao carregar o grupo. Tente novamente.');
     } finally {
       this.isLoading.set(false);
     }
