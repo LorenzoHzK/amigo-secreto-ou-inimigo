@@ -67,12 +67,54 @@ npm run db:push -w apps/api
 
 ## Deploy de Edge Functions
 
-```bash
-# Deploy de todas as functions
-npm run functions:deploy -w apps/api
+Para fazer o deploy da Edge Function `perform-draw` no Supabase Cloud:
 
-# Servir localmente (para teste)
+1. **Efetuar login na CLI do Supabase (se ainda não tiver feito):**
+   ```bash
+   npx supabase login
+   ```
+2. **Vincular o projeto local ao projeto cloud (se ainda não tiver feito):**
+   ```bash
+   npx supabase link --project-ref SEU_PROJECT_REF
+   ```
+3. **Deploy da Edge Function:**
+   ```bash
+   # Deploy específico da função perform-draw
+   npx supabase functions deploy perform-draw --project-ref SEU_PROJECT_REF
+   
+   # Ou via script do package.json (faz o deploy de todas as functions)
+   npm run functions:deploy -w apps/api
+   ```
+
+*Nota: As variáveis de ambiente `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` são injetadas automaticamente no ambiente do Supabase Edge Runtime, não sendo necessário configurá-las manualmente no painel.*
+
+## Desenvolvimento e Testes de Edge Functions
+
+### Como rodar localmente
+```bash
+# Servir a função localmente
 npm run functions:serve -w apps/api
+```
+Isso disponibilizará o endpoint localmente em `http://localhost:54321/functions/v1/perform-draw`.
+
+### Como testar localmente via `curl`
+```bash
+curl -i --location --request POST 'http://localhost:54321/functions/v1/perform-draw' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer SUA_ANON_KEY_LOCAL' \
+  --data-raw '{
+    "admin_token": "admin-token-demo-1234"
+  }'
+```
+
+### Como testar em produção via `curl`
+```bash
+curl -i --location --request POST 'https://SEU_PROJECT_REF.supabase.co/functions/v1/perform-draw' \
+  --header 'Content-Type: application/json' \
+  --header 'Authorization: Bearer SUA_ANON_KEY_PROD' \
+  --data-raw '{
+    "admin_token": "admin-token-do-seu-grupo"
+  }'
 ```
 
 ## Migrations
@@ -91,19 +133,27 @@ npm run functions:serve -w apps/api
 |--------|-----------|--------|
 | `perform-draw` | Executa o sorteio atomicamente server-side | `POST` |
 
-### Payload `perform-draw`
+### Detalhes da API `perform-draw`
 
-**Request:**
+**Payload Request:**
 ```json
-{ "admin_token": "uuid-do-grupo" }
+{ "admin_token": "uuid-do-grupo-ou-token-admin" }
 ```
 
-**Response 200:**
+**Response 200 (Sucesso):**
 ```json
-{ "drawn_at": "2024-12-25T...", "participant_count": 4, "group_name": "Amigo da Família" }
+{
+  "drawn_at": "2024-12-25T10:00:00.000Z",
+  "participant_count": 4,
+  "group_name": "Amigo da Família"
+}
 ```
 
-**Erros:** `400` (< 3 participantes), `404` (token inválido), `409` (já sorteado), `500` (erro interno)
+**Erros:**
+- `400`: Participantes insuficientes (mínimo 3). Ex: `{ "error": "Mínimo de 3 participantes necessários para o sorteio" }`
+- `404`: Grupo não encontrado para o token fornecido. Ex: `{ "error": "Grupo não encontrado" }`
+- `409`: Sorteio já realizado anteriormente. Ex: `{ "error": "Sorteio já realizado para este grupo" }`
+- `500`: Erro interno no servidor ou falha ao salvar no banco.
 
 ## Variáveis de Ambiente
 
