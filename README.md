@@ -184,7 +184,8 @@ npm run dev:web
 | `npm run dev:web` | Apenas Angular dev server |
 | `npm run dev:api` | Apenas Supabase local (Docker) |
 | `npm run build:web` | Build de produção do Angular |
-| `npm run test:web` | Roda testes do frontend |
+| `npm run test:web` | Roda testes do frontend via Karma/Jasmine |
+| `npm run test:unit` | Roda testes unitários do frontend via Vitest |
 | `npm run lint:web` | Linting do frontend |
 | `npm run db:push` | Aplica migrations no Supabase cloud |
 | `npm run db:reset` | Reseta banco local e aplica seed |
@@ -196,10 +197,11 @@ npm run dev:web
 
 ```bash
 cd apps/web
-npm run start    # Dev server
-npm run build    # Build produção
-npm run test     # Testes
-npm run lint     # Linting
+npm run start      # Dev server
+npm run build      # Build produção
+npm run test       # Testes via Karma
+npm run test:unit  # Testes via Vitest
+npm run lint       # Linting
 ```
 
 ### `apps/api` (Supabase)
@@ -218,14 +220,17 @@ npm run functions:deploy # supabase functions deploy
 
 ## 7. Configuração de Ambiente
 
-O frontend usa arquivos de environment do Angular para configuração. **Nunca commitar credenciais reais.**
+O projeto utiliza variáveis de ambiente e arquivos de configuração local para o frontend.
 
-| Arquivo | Uso |
-|---------|-----|
-| `apps/web/src/environments/environment.ts` | Produção (build `--configuration=production`) |
-| `apps/web/src/environments/environment.development.ts` | Desenvolvimento local |
+### Fluxo de Configuração:
 
-Ambos já existem com placeholders. Preencha com os valores do seu projeto Supabase.
+1. **Copiar o Exemplo:** Copie o arquivo `.env.example` na raiz do monorepo para `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. **Preencher Credenciais:** Preencha o arquivo `.env` com a URL e chaves anônimas do seu painel Supabase.
+3. **Desenvolvimento Local:** Coloque os valores correspondentes em `apps/web/src/environments/environment.development.ts` para que o Angular dev server consiga se comunicar com o Supabase local ou cloud.
+4. **Produção / Deploy:** Configure as variáveis de ambiente (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `APP_NAME`) no painel de controle do seu host de deploy (Vercel, Netlify, etc.).
 
 > As Edge Functions (`apps/api`) recebem `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` automaticamente do ambiente Supabase — não requer configuração manual.
 
