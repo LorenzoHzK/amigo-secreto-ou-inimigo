@@ -18,6 +18,8 @@ import { DesktopLayoutComponent } from '../../shared/layouts/desktop-layout/desk
 import { GroupService } from '../../core/services/group.service';
 import { ParticipantService } from '../../core/services/participant.service';
 import { DrawService } from '../../core/services/draw.service';
+import { ApiErrorService } from '../../core/services/api-error.service';
+import { InitialsPipe } from '../../shared/pipes/initials.pipe';
 import { Group, Participant } from '../../core/models';
 
 @Component({
@@ -32,6 +34,7 @@ import { Group, Participant } from '../../core/models';
     DesktopLayoutComponent,
     RouterLink,
     UpperCasePipe,
+    InitialsPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -178,8 +181,9 @@ import { Group, Participant } from '../../core/models';
               @for (participant of participants(); track participant.id) {
                 <app-participant-row
                   [name]="participant.name"
-                  [initials]="getInitials(participant.name)"
-                  (remove)="deleteParticipant(participant.id)"
+                  [initials]="participant.name | initials"
+                  [showRemove]="!isDrawn()"
+                  (remove)="deleteParticipant(participant.id, participant.name)"
                 />
               } @empty {
                 <p class="py-4 text-center text-sm text-neutral-400">
@@ -316,8 +320,9 @@ import { Group, Participant } from '../../core/models';
               @for (participant of participants(); track participant.id) {
                 <app-participant-row
                   [name]="participant.name"
-                  [initials]="getInitials(participant.name)"
-                  (remove)="deleteParticipant(participant.id)"
+                  [initials]="participant.name | initials"
+                  [showRemove]="!isDrawn()"
+                  (remove)="deleteParticipant(participant.id, participant.name)"
                 />
               } @empty {
                 <p class="py-8 text-center text-sm text-neutral-400">
@@ -337,6 +342,7 @@ export class AdminPage {
   private readonly groupService = inject(GroupService);
   private readonly participantService = inject(ParticipantService);
   private readonly drawService = inject(DrawService);
+  private readonly apiError = inject(ApiErrorService);
 
   readonly group = signal<Group | null>(null);
   readonly participants = signal<Participant[]>([]);
@@ -432,13 +438,22 @@ export class AdminPage {
     }
   }
 
-  async deleteParticipant(id: string): Promise<void> {
+  async deleteParticipant(id: string, name: string): Promise<void> {
+    if (this.isDrawn()) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Remover "${name}" do grupo? Esta ação não pode ser desfeita.`,
+    );
+    if (!confirmed) return;
+
     try {
       await this.participantService.removeParticipant(id);
       this.participants.update((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
       console.error(err);
-      alert('Erro ao remover participante.');
+      this.apiError.report('Erro ao remover participante. Tente novamente.');
     }
   }
 
@@ -460,10 +475,4 @@ export class AdminPage {
     }
   }
 
-  getInitials(name: string): string {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 0 || !parts[0]) return '';
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
 }
