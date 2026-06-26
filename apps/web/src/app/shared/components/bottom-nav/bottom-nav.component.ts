@@ -37,7 +37,7 @@ type BottomNavItem = 'groups' | 'reveal' | 'admin';
           Grupos
         </a>
         <a
-          routerLink="/revelar/demo"
+          [routerLink]="revealLink"
           class="focus:ring-primary-300 flex min-h-14 flex-col items-center justify-center gap-1 rounded-[1.15rem] px-2 text-[11px] font-extrabold transition focus:ring-2 focus:outline-none"
           [class]="itemClass('reveal')"
           aria-label="Abrir revelação"
@@ -59,7 +59,7 @@ type BottomNavItem = 'groups' | 'reveal' | 'admin';
           Revelar
         </a>
         <a
-          routerLink="/admin/demo"
+          [routerLink]="adminLink"
           class="focus:ring-primary-300 flex min-h-14 flex-col items-center justify-center gap-1 rounded-[1.15rem] px-2 text-[11px] font-extrabold transition focus:ring-2 focus:outline-none"
           [class]="itemClass('admin')"
           aria-label="Abrir painel admin"
@@ -91,6 +91,26 @@ type BottomNavItem = 'groups' | 'reveal' | 'admin';
 })
 export class BottomNavComponent {
   active = input.required<BottomNavItem>();
+
+  get revealLink(): string {
+    try {
+      const tokens = JSON.parse(localStorage.getItem('my_personal_tokens') ?? '[]') as string[];
+      const last = tokens[tokens.length - 1];
+      return last ? `/revelar/${last}` : '/';
+    } catch {
+      return '/';
+    }
+  }
+
+  get adminLink(): string {
+    try {
+      const tokens = JSON.parse(localStorage.getItem('my_admin_tokens') ?? '[]') as string[];
+      const last = tokens[tokens.length - 1];
+      return last ? `/admin/${last}` : '/criar';
+    } catch {
+      return '/criar';
+    }
+  }
 
   itemClass(item: BottomNavItem): string {
     return this.active() === item
