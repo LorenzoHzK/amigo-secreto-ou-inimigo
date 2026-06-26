@@ -52,6 +52,18 @@ import { GroupService } from '../../core/services/group.service';
               }
             </label>
 
+            <label class="block">
+              <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">
+                Data de revelação (opcional)
+              </span>
+              <input
+                type="date"
+                formControlName="revealDate"
+                [min]="today()"
+                class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
+              />
+            </label>
+
             <button
               type="submit"
               [disabled]="form.invalid || isSubmitting()"
@@ -98,6 +110,18 @@ import { GroupService } from '../../core/services/group.service';
                 <p class="mt-2 text-xs font-bold text-error">Use apenas números e decimal opcional, como 50 ou 50,00.</p>
               }
             </label>
+
+            <label class="block md:col-span-2">
+              <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">
+                Data de revelação (opcional)
+              </span>
+              <input
+                type="date"
+                formControlName="revealDate"
+                [min]="today()"
+                class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
+              />
+            </label>
           </div>
 
           <button
@@ -119,10 +143,12 @@ export class CreateGroupPage {
 
   readonly isSubmitting = signal(false);
   readonly buttonLabel = signal('Criar grupo 🎉');
+  readonly today = signal(new Date().toISOString().split('T')[0]);
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(3)]],
     priceLimit: ['', [Validators.pattern(/^\d+(?:[.,]\d{1,2})?$/)]],
+    revealDate: [''],
   });
 
   async createGroup(): Promise<void> {
@@ -136,11 +162,18 @@ export class CreateGroupPage {
     const parsedPrice = rawPrice ? Number.parseFloat(rawPrice.replace(',', '.')) : null;
     const price = parsedPrice !== null && Number.isFinite(parsedPrice) ? parsedPrice : null;
 
+    const revealDateRaw = this.form.controls.revealDate.value;
+    const revealDate = revealDateRaw ? new Date(revealDateRaw).toISOString() : null;
+
     this.isSubmitting.set(true);
     this.buttonLabel.set('Criando...');
 
     try {
-      const group = await this.groupService.createGroup(name, price);
+      const group = await this.groupService.createGroup({
+        name,
+        price_limit: price,
+        reveal_date: revealDate,
+      });
 
       const storedAdmin = this.readTokenList('my_admin_tokens');
       if (!storedAdmin.includes(group.admin_token)) {
