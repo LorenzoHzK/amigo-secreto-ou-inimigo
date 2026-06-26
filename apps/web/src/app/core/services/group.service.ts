@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { Group } from '../models';
+import { Group, CreateGroupPayload, GroupStatus } from '../models';
 import { SupabaseRestService } from './supabase-rest.service';
 
 @Injectable({ providedIn: 'root' })
@@ -41,21 +41,52 @@ export class GroupService {
     );
   }
 
-  async createGroup(name: string, priceLimit: number | null): Promise<Group> {
+  async createGroup(
+    payloadOrName: CreateGroupPayload | string,
+    priceLimit?: number | null,
+  ): Promise<Group> {
+    let payload: CreateGroupPayload;
+    if (typeof payloadOrName === 'string') {
+      payload = {
+        name: payloadOrName,
+        price_limit: priceLimit ?? null,
+        reveal_date: null,
+      };
+    } else {
+      payload = payloadOrName;
+    }
+
     const newGroup = {
       id: crypto.randomUUID(),
-      name,
+      name: payload.name,
       admin_token: crypto.randomUUID(),
       invite_token: crypto.randomUUID(),
-      price_limit: priceLimit,
-      reveal_date: null,
-      status: 'open',
+      price_limit: payload.price_limit,
+      reveal_date: payload.reveal_date,
+      status: 'open' as const,
       drawn_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    } satisfies Omit<Group, 'owner_id'>;
+      owner_id: null,
+    };
 
     return firstValueFrom(this.supabase.insertOne<Group>(this.table, newGroup));
+  }
+
+  async getGroupsByOwnerId(ownerId: string): Promise<Group[]> {
+    return firstValueFrom(
+      this.supabase.select<Group>(this.table, {
+        filters: { owner_id: ownerId },
+        order: 'created_at',
+        ascending: false,
+      }),
+    );
+  }
+
+  async updateGroupStatus(id: string, status: GroupStatus): Promise<Group> {
+    return firstValueFrom(
+      this.supabase.updateOne<Group>(this.table, { id }, { status }),
+    );
   }
 
   async updateGroupPriceLimit(
