@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink, Router } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { inject } from '@angular/core';
 import { AppAvatarComponent } from '../app-avatar/app-avatar.component';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-desktop-header',
@@ -47,32 +48,38 @@ import { AppAvatarComponent } from '../app-avatar/app-avatar.component';
               class="hover:text-primary focus:ring-primary-300 rounded-full px-5 py-2.5 transition hover:bg-white focus:ring-2 focus:outline-none"
               >Como Funciona</a
             >
-            <a
-              routerLink="/revelar/demo"
-              class="hover:text-primary focus:ring-primary-300 rounded-full px-5 py-2.5 transition hover:bg-white focus:ring-2 focus:outline-none"
-              >Super IA</a
-            >
           </div>
         </nav>
 
         <div class="flex items-center gap-3">
-          <button
-            type="button"
-            class="text-neutral hover:border-primary-200 hover:bg-primary-50 hover:text-primary focus:ring-primary-300 rounded-full border border-[#ececf3] bg-white px-5 py-2.5 text-sm font-extrabold transition focus:ring-2 focus:outline-none active:scale-[0.98]"
-            (click)="goToJoin()"
-          >
-            Entrar
-          </button>
-          <app-avatar initials="LS" sizeClass="size-10 text-xs" />
+          @if (auth.isAuthenticated()) {
+            <a
+              routerLink="/grupos"
+              class="text-neutral hover:border-primary-200 hover:bg-primary-50 hover:text-primary focus:ring-primary-300 rounded-full border border-[#ececf3] bg-white px-5 py-2.5 text-sm font-extrabold transition focus:ring-2 focus:outline-none active:scale-[0.98]"
+            >
+              Meus Grupos
+            </a>
+          } @else {
+            <a
+              routerLink="/login"
+              class="text-neutral hover:border-primary-200 hover:bg-primary-50 hover:text-primary focus:ring-primary-300 rounded-full border border-[#ececf3] bg-white px-5 py-2.5 text-sm font-extrabold transition focus:ring-2 focus:outline-none active:scale-[0.98]"
+            >
+              Entrar
+            </a>
+          }
+          <app-avatar [initials]="userInitials()" sizeClass="size-10 text-xs" />
         </div>
       </div>
     </header>
   `,
 })
 export class DesktopHeaderComponent {
-  private readonly router = inject(Router);
+  readonly auth = inject(AuthService);
 
-  goToJoin(): void {
-    void this.router.navigateByUrl('/entrar/demo');
-  }
+  readonly userInitials = computed(() => {
+    const user = this.auth.user();
+    if (!user || !user.email) return 'LS';
+    const emailParts = user.email.split('@')[0];
+    return emailParts.substring(0, 2).toUpperCase();
+  });
 }
