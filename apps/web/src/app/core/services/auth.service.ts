@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../tokens/supabase.tokens';
 
 export interface SupabaseUser {
   id: string;
@@ -38,9 +38,9 @@ interface SignUpResponse {
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly storageKey = 'amigo-oculto.supabase.session';
-  private readonly baseUrl = environment.supabaseUrl.replace(/\/$/, '');
+  private readonly baseUrl = inject(SUPABASE_URL).replace(/\/$/, '');
   private readonly anonHeaders = new HttpHeaders({
-    apikey: environment.supabaseAnonKey,
+    apikey: inject(SUPABASE_ANON_KEY),
     'Content-Type': 'application/json',
   });
   private readonly sessionSubject = new BehaviorSubject<SupabaseSession | null>(
