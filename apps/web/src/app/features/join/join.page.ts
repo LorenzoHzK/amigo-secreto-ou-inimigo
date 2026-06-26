@@ -148,13 +148,28 @@ export class JoinPage {
       return;
     }
 
+    const name = this.form.controls.participantName.value.trim();
+
+    try {
+      const existing = await this.participantService.getParticipantsByGroupId(group.id);
+      const duplicate = existing.some(
+        (p) => p.name.toLowerCase() === name.toLowerCase(),
+      );
+      if (duplicate) {
+        this.error.set(`Já existe um participante com o nome "${name}" neste grupo.`);
+        return;
+      }
+    } catch (error) {
+      // Continuar mesmo se a verificação falhar — o banco tem unique constraints se necessário
+    }
+
     this.isSubmitting.set(true);
     this.buttonLabel.set('Confirmando...');
 
     try {
       const participant = await this.participantService.addParticipant(
         group.id,
-        this.form.controls.participantName.value.trim(),
+        name,
       );
 
       const storedPersonal = this.readTokenList('my_personal_tokens');
