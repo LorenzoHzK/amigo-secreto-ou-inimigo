@@ -25,10 +25,23 @@ When acting in the front-end ecosystem of this project, strictly obey:
 - Use Tailwind utility classes directly in HTML.
 - The only allowed exception is the global styles.css file.
 
-3. FEATURE-SLICED DESIGN - FSD:
+3. FOLDER CONVENTION (apps/web/src/app/):
 
-- core/: bootstrapping, providers, interceptors and app infrastructure.
-- shared/: dumb reusable components only.
-- shared/ MUST NOT import from features/.
-- features/: domain isolated code.
-- Avoid cross-feature coupling.
+- `core/` — services, guards, interceptors, tokens, models. App infrastructure only.
+- `shared/` — dumb, reusable standalone components and pipes (no business logic).
+- `shared/` MUST NOT import from `features/`.
+- `features/` — page-level smart components. Each feature is isolated.
+- Avoid cross-feature coupling — features communicate via services in `core/`, never via direct imports.
+
+4. SECURITY RULES (frontend-specific):
+
+- NEVER query the `participants` table directly for SELECT — always use `participants_public` view.
+- NEVER implement draw logic on the frontend — it belongs exclusively in the `perform-draw` Edge Function.
+- NEVER expose `drawn_participant_id` in any component or service. Use `MyDrawResult` from the `get_my_draw` RPC.
+- NEVER read `admin_token` from query params or URL — only from the route param `:adminToken` after the `adminTokenGuard` validates it.
+
+5. RESOURCE API:
+
+- For data fetching in page components, prefer `resource()` over manual `signal()` + `isLoading` + `error` boilerplate.
+- Use `resource()` with `reload()` after mutations (add/delete/draw).
+- `httpResource()` is acceptable for simple GET-only cases without post-fetch transformation.
