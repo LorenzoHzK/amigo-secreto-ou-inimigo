@@ -6,6 +6,7 @@ import {
   inject,
   input,
   signal,
+  resource,
 } from '@angular/core';
 import { UpperCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -353,48 +354,43 @@ export class AdminPage {
     return name;
   });
 
-  readonly group = signal<Group | null>(null);
-  readonly participants = signal<Participant[]>([]);
-  readonly isLoading = signal<boolean>(true);
-  readonly error = signal<string | null>(null);
+  // Resource do grupo — reativa ao adminToken
+  readonly groupResource = resource<Group | null, { token: string }>({
+    params: () => ({ token: this.adminToken() }),
+    loader: ({ params }) => this.groupService.getGroupByAdminToken(params.token),
+  });
+
+  // Resource dos participantes — reativa ao id do grupo
+  readonly participantsResource = resource<any[], { groupId: string | undefined }>({
+    params: () => ({ groupId: this.groupResource.value()?.id }),
+    loader: ({ params }) =>
+      params.groupId
+        ? this.participantService.getParticipantsByGroupId(params.groupId)
+        : Promise.resolve([]),
+  });
+
+  // Aliases para o template
+  readonly group = computed<Group | null>(() => this.groupResource.value() ?? null);
+  readonly participants = computed<any[]>(() => this.participantsResource.value() ?? []);
+  readonly isLoading = computed(
+    () => this.groupResource.isLoading() || this.participantsResource.isLoading(),
+  );
+  readonly error = computed(() => {
+    if (this.groupResource.error() || this.participantsResource.error()) {
+      return 'Falha ao carregar dados do grupo.';
+    }
+    if (!this.groupResource.isLoading() && this.groupResource.value() === null) {
+      return 'Grupo não encontrado com o token fornecido.';
+    }
+    return null;
+  });
+
   readonly isDrawn = computed(() => this.group()?.drawn_at !== null);
 
   readonly copyLabel = signal<string>('Copiar Link');
   readonly drawLabel = signal<string>('🎉 Sortear Nomes');
 
-  constructor() {
-    effect(() => {
-      const token = this.adminToken();
-      if (token) {
-        localStorage.setItem('last-admin-token', token);
-        void this.loadData(token);
-      }
-    });
-  }
-
-  async loadData(token: string): Promise<void> {
-    this.isLoading.set(true);
-    this.error.set(null);
-    try {
-      const g = await this.groupService.getGroupByAdminToken(token);
-      if (!g) {
-        this.error.set('Grupo não encontrado com o token fornecido.');
-        this.group.set(null);
-        this.participants.set([]);
-        return;
-      }
-      this.group.set(g);
-      const list = await this.participantService.getParticipantsByGroupId(g.id);
-      this.participants.set(list);
-    } catch (err) {
-      console.error(err);
-      this.error.set('Falha ao carregar dados do grupo.');
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
-
-  priceLimitLabel(): string {
+  readonly priceLimitLabel = computed(() => {
     const priceLimit = this.group()?.price_limit;
     if (priceLimit === undefined || priceLimit === null) {
       return 'Sem limite de preço';
@@ -403,9 +399,9 @@ export class AdminPage {
       style: 'currency',
       currency: 'BRL',
     }).format(priceLimit)}`;
-  }
+  });
 
-  revealDateLabel(): string {
+  readonly revealDateLabel = computed(() => {
     const drawnAt = this.group()?.drawn_at;
     if (drawnAt) {
       return `Sorteado em: ${new Intl.DateTimeFormat('pt-BR', {
@@ -415,6 +411,15 @@ export class AdminPage {
       }).format(new Date(drawnAt))}`;
     }
     return 'Aguardando Sorteio';
+  });
+
+  constructor() {
+    effect(() => {
+      const token = this.adminToken();
+      if (token) {
+        localStorage.setItem('last-admin-token', token);
+      }
+    });
   }
 
   getInviteLink(): string {
@@ -447,8 +452,8 @@ export class AdminPage {
     }
 
     try {
-      const newP = await this.participantService.addParticipant(g.id, trimmed);
-      this.participants.update((prev) => [...prev, newP]);
+      await this.participantService.addParticipant(g.id, trimmed);
+      this.participantsResource.reload();
     } catch (err) {
       console.error(err);
       this.apiError.report('Erro ao adicionar participante. Tente novamente.');
@@ -467,7 +472,7 @@ export class AdminPage {
 
     try {
       await this.participantService.removeParticipant(id);
-      this.participants.update((prev) => prev.filter((p) => p.id !== id));
+      this.participantsResource.reload();
     } catch (err) {
       console.error(err);
       this.apiError.report('Erro ao remover participante. Tente novamente.');
@@ -482,7 +487,8 @@ export class AdminPage {
     try {
       await this.drawService.draw(this.adminToken());
       this.drawLabel.set('Sorteio realizado ✓');
-      await this.loadData(this.adminToken());
+      this.groupResource.reload();
+      this.participantsResource.reload();
     } catch (err) {
       console.error(err);
       const msg =
@@ -491,5 +497,4 @@ export class AdminPage {
       this.drawLabel.set('🎉 Sortear Nomes');
     }
   }
-
 }
