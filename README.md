@@ -265,4 +265,5 @@ Para detalhes e setup do banco, ver [apps/api/README.md](./apps/api/README.md).
 
 ---
 
-Desenvolvido com ❤️ por Matheus Lorenzo e Eduardo — UTFPR Campus Guarapuava.
+Desenvolvido com ❤️ por Matheus Lorenzo e Eduardo — UTFPR Campus Guarapuava (2026).
+
