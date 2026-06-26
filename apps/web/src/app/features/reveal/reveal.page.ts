@@ -6,6 +6,7 @@ import {
   inject,
   input,
   signal,
+  resource,
 } from '@angular/core';
 import { CurrencyPipe, DatePipe, UpperCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -368,35 +369,23 @@ export class RevealPage {
   private readonly revealService = inject(RevealService);
   private readonly apiError = inject(ApiErrorService);
 
-  readonly drawResult = signal<MyDrawResult | null>(null);
-  readonly isLoading = signal<boolean>(true);
-  readonly error = signal<string | null>(null);
+  readonly drawResource = resource<MyDrawResult | null, { token: string }>({
+    params: () => ({ token: this.personalToken() }),
+    loader: ({ params }) => this.revealService.getMyDraw(params.token),
+  });
+
+  readonly drawResult = computed<MyDrawResult | null>(() => this.drawResource.value() ?? null);
+  readonly isLoading = computed<boolean>(() => this.drawResource.isLoading());
+  readonly error = computed<string | null>(() => {
+    if (this.drawResource.error()) return 'Erro ao carregar os dados. Tente novamente.';
+    if (!this.drawResource.isLoading() && !this.drawResource.value()) {
+      return 'Link de revelação inválido ou expirado.';
+    }
+    return null;
+  });
+
   readonly isRevealed = signal<boolean>(false);
   readonly revealLabel = signal<string>('Revelar Resultado');
-
-  constructor() {
-    effect(() => {
-      const token = this.personalToken();
-      if (token) void this.loadData(token);
-    });
-  }
-
-  async loadData(token: string): Promise<void> {
-    this.isLoading.set(true);
-    this.error.set(null);
-    try {
-      const result = await this.revealService.getMyDraw(token);
-      if (!result) {
-        this.error.set('Link de revelação inválido ou expirado.');
-        return;
-      }
-      this.drawResult.set(result);
-    } catch {
-      this.error.set('Erro ao carregar os dados. Tente novamente.');
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
 
   // Computed signals para simplificar o template
   readonly participant = computed(() => this.drawResult()?.participant ?? null);
