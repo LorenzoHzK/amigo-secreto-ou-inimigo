@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -22,6 +23,8 @@ import {
 } from '../../shared/components/group-grid/group-grid.component';
 import { GroupService } from '../../core/services/group.service';
 import { ParticipantService } from '../../core/services/participant.service';
+import { AuthService } from '../../core/services/auth.service';
+import { ApiErrorService } from '../../core/services/api-error.service';
 
 interface GroupMock {
   type: string;
@@ -67,7 +70,7 @@ interface GroupMock {
             >
           </p>
         </div>
-        <app-avatar initials="LS" />
+        <app-avatar [initials]="userInitials()" />
       </header>
 
       <main class="flex-1 space-y-5 px-6 pb-8">
@@ -227,6 +230,8 @@ export class GroupsPage implements OnInit {
   private readonly router = inject(Router);
   private readonly groupService = inject(GroupService);
   private readonly participantService = inject(ParticipantService);
+  private readonly auth = inject(AuthService);
+  private readonly apiError = inject(ApiErrorService);
 
   readonly enemyLabel = signal<string>('Descubra Inimigo');
   readonly rulesLabel = signal<string>('Ver Regras');
@@ -235,6 +240,13 @@ export class GroupsPage implements OnInit {
   readonly desktopGroups = signal<DesktopGroupCard[]>([]);
   readonly isLoading = signal<boolean>(true);
 
+  readonly userInitials = computed(() => {
+    const user = this.auth.user();
+    if (!user || !user.email) return 'LS';
+    const emailParts = user.email.split('@')[0];
+    return emailParts.substring(0, 2).toUpperCase();
+  });
+
   ngOnInit(): void {
     void this.loadGroups();
   }
@@ -242,148 +254,207 @@ export class GroupsPage implements OnInit {
   async loadGroups(): Promise<void> {
     this.isLoading.set(true);
     try {
-      let storedAdmin: string[] = [];
-      let storedPersonal: string[] = [];
-      try {
-        storedAdmin = JSON.parse(
-          localStorage.getItem('my_admin_tokens') || '[]',
-        );
-        storedPersonal = JSON.parse(
-          localStorage.getItem('my_personal_tokens') || '[]',
-        );
-      } catch {
-        // Ignorar erro de parsing
+      if (this.auth.isAuthenticated() && this.auth.user()?.id) {
+        await this.loadGroupsFromDatabase();
+      } else {
+        await this.loadGroupsFromLocalStorage();
       }
-
-      const cards: GroupMock[] = [];
-      const dCards: DesktopGroupCard[] = [];
-
-      // 1. Carregar grupos onde o usuário é organizador em paralelo
-      const adminGroupsResults = await Promise.all(
-        storedAdmin.map(async (token) => {
-          const group = await this.groupService.getGroupByAdminToken(token);
-          if (!group) return null;
-          const participants =
-            await this.participantService.getParticipantsByGroupId(group.id);
-          return { group, participants };
-        }),
-      );
-
-      // Filtrar os nulos e registrar os IDs para evitar duplicidades
-      const validAdminGroups = adminGroupsResults.filter(
-        (r): r is { group: any; participants: any[] } => r !== null,
-      );
-      const adminGroupIds = new Set(validAdminGroups.map((r) => r.group.id));
-
-      // 2. Carregar participações em paralelo
-      const personalParticipantsResults = await Promise.all(
-        storedPersonal.map(async (token) => {
-          const p =
-            await this.participantService.getParticipantByPersonalToken(token);
-          if (!p) return null;
-
-          // Se já carregamos este grupo como administrador, não faz sentido buscar grupo/participantes novamente
-          if (adminGroupIds.has(p.group_id)) return null;
-
-          const group = await this.groupService.getGroupById(p.group_id);
-          if (!group) return null;
-
-          const participants =
-            await this.participantService.getParticipantsByGroupId(group.id);
-          return { participant: p, group, participants };
-        }),
-      );
-
-      const validPersonalGroups = personalParticipantsResults.filter(
-        (r): r is { participant: any; group: any; participants: any[] } =>
-          r !== null,
-      );
-
-      // Processar grupos de organizador
-      for (const { group, participants } of validAdminGroups) {
-        const initialsList = participants
-          .slice(0, 3)
-          .map((p) => this.getInitials(p.name));
-        const statusStr = group.drawn_at ? 'Sorteado' : 'Aberto';
-        const statusClass = group.drawn_at
-          ? 'border-accent-100 bg-accent-50 text-accent-800'
-          : 'border-primary-100 bg-primary-50 text-primary-800';
-
-        const priceLimit = group.price_limit;
-        const priceStr = priceLimit
-          ? `Limite: R$ ${priceLimit}`
-          : 'Sem limite de preço';
-
-        cards.push({
-          type: 'Organizador',
-          status: statusStr,
-          statusClass,
-          title: group.name,
-          date: group.drawn_at ? 'Sorteio realizado' : 'Aguardando sorteio',
-          priceRange: priceStr,
-          actionLabel: 'Gerenciar',
-          avatars: initialsList.map((init) => ({ initials: init })),
-          routeUrl: `/admin/${group.admin_token}`,
-        });
-
-        dCards.push({
-          name: group.name,
-          status: statusStr,
-          statusClass: group.drawn_at ? 'bg-accent' : 'bg-primary',
-          participants: `${participants.length} participantes`,
-          value: priceStr,
-          action: 'Gerenciar',
-          avatars: initialsList,
-          actionUrl: `/admin/${group.admin_token}`,
-        });
-      }
-
-      // Processar grupos de participante
-      for (const { participant, group, participants } of validPersonalGroups) {
-        const initialsList = participants
-          .slice(0, 3)
-          .map((pt) => this.getInitials(pt.name));
-        const statusStr = group.drawn_at ? 'Sorteado' : 'Aberto';
-        const statusClass = group.drawn_at
-          ? 'border-accent-100 bg-accent-50 text-accent-800'
-          : 'border-primary-100 bg-primary-50 text-primary-800';
-
-        const priceLimit = group.price_limit;
-        const priceStr = priceLimit
-          ? `Limite: R$ ${priceLimit}`
-          : 'Sem limite de preço';
-
-        cards.push({
-          type: 'Participante',
-          status: statusStr,
-          statusClass,
-          title: group.name,
-          date: group.drawn_at ? 'Sorteio realizado' : 'Aguardando sorteio',
-          priceRange: priceStr,
-          actionLabel: group.drawn_at ? 'Revelar Amigo' : 'Ver Detalhes',
-          avatars: initialsList.map((init) => ({ initials: init })),
-          routeUrl: `/revelar/${participant.personal_token}`,
-        });
-
-        dCards.push({
-          name: group.name,
-          status: statusStr,
-          statusClass: group.drawn_at ? 'bg-accent' : 'bg-primary',
-          participants: `${participants.length} participantes`,
-          value: priceStr,
-          action: group.drawn_at ? 'Revelar' : 'Detalhes',
-          avatars: initialsList,
-          actionUrl: `/revelar/${participant.personal_token}`,
-        });
-      }
-
-      this.groups.set(cards);
-      this.desktopGroups.set(dCards);
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
+      this.apiError.report('Erro ao carregar grupos. Tente novamente.');
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  private async loadGroupsFromDatabase(): Promise<void> {
+    const userId = this.auth.user()!.id;
+    const groups = await this.groupService.getGroupsByOwnerId(userId);
+    const cards: GroupMock[] = [];
+    const dCards: DesktopGroupCard[] = [];
+
+    for (const group of groups) {
+      const participants =
+        await this.participantService.getParticipantsByGroupId(group.id);
+      const initialsList = participants
+        .slice(0, 3)
+        .map((p) => this.getInitials(p.name));
+      const statusStr = group.drawn_at ? 'Sorteado' : 'Aberto';
+      const statusClass = group.drawn_at
+        ? 'border-accent-100 bg-accent-50 text-accent-800'
+        : 'border-primary-100 bg-primary-50 text-primary-800';
+
+      const priceLimit = group.price_limit;
+      const priceStr = priceLimit
+        ? `Limite: R$ ${priceLimit}`
+        : 'Sem limite de preço';
+
+      cards.push({
+        type: 'Organizador',
+        status: statusStr,
+        statusClass,
+        title: group.name,
+        date: group.drawn_at ? 'Sorteio realizado' : 'Aguardando sorteio',
+        priceRange: priceStr,
+        actionLabel: 'Gerenciar',
+        avatars: initialsList.map((init) => ({ initials: init })),
+        routeUrl: `/admin/${group.admin_token}`,
+      });
+
+      dCards.push({
+        name: group.name,
+        status: statusStr,
+        statusClass: group.drawn_at ? 'bg-accent' : 'bg-primary',
+        participants: `${participants.length} participantes`,
+        value: priceStr,
+        action: 'Gerenciar',
+        avatars: initialsList,
+        actionUrl: `/admin/${group.admin_token}`,
+      });
+    }
+
+    this.groups.set(cards);
+    this.desktopGroups.set(dCards);
+  }
+
+  private async loadGroupsFromLocalStorage(): Promise<void> {
+    let storedAdmin: string[] = [];
+    let storedPersonal: string[] = [];
+    try {
+      storedAdmin = JSON.parse(
+        localStorage.getItem('my_admin_tokens') || '[]',
+      );
+      storedPersonal = JSON.parse(
+        localStorage.getItem('my_personal_tokens') || '[]',
+      );
+    } catch {
+      // Ignorar erro de parsing
+    }
+
+    const cards: GroupMock[] = [];
+    const dCards: DesktopGroupCard[] = [];
+
+    // 1. Carregar grupos onde o usuário é organizador em paralelo
+    const adminGroupsResults = await Promise.all(
+      storedAdmin.map(async (token) => {
+        const group = await this.groupService.getGroupByAdminToken(token);
+        if (!group) return null;
+        const participants =
+          await this.participantService.getParticipantsByGroupId(group.id);
+        return { group, participants };
+      }),
+    );
+
+    // Filtrar os nulos e registrar os IDs para evitar duplicidades
+    const validAdminGroups = adminGroupsResults.filter(
+      (r): r is { group: any; participants: any[] } => r !== null,
+    );
+    const adminGroupIds = new Set(validAdminGroups.map((r) => r.group.id));
+
+    // 2. Carregar participações em paralelo
+    const personalParticipantsResults = await Promise.all(
+      storedPersonal.map(async (token) => {
+        const p =
+          await this.participantService.getParticipantByPersonalToken(token);
+        if (!p) return null;
+
+        // Se já carregamos este grupo como administrador, não faz sentido buscar grupo/participantes novamente
+        if (adminGroupIds.has(p.group_id)) return null;
+
+        const group = await this.groupService.getGroupById(p.group_id);
+        if (!group) return null;
+
+        const participants =
+          await this.participantService.getParticipantsByGroupId(group.id);
+        return { participant: p, group, participants };
+      }),
+    );
+
+    const validPersonalGroups = personalParticipantsResults.filter(
+      (r): r is { participant: any; group: any; participants: any[] } =>
+        r !== null,
+    );
+
+    // Processar grupos de organizador
+    for (const { group, participants } of validAdminGroups) {
+      const initialsList = participants
+        .slice(0, 3)
+        .map((p) => this.getInitials(p.name));
+      const statusStr = group.drawn_at ? 'Sorteado' : 'Aberto';
+      const statusClass = group.drawn_at
+        ? 'border-accent-100 bg-accent-50 text-accent-800'
+        : 'border-primary-100 bg-primary-50 text-primary-800';
+
+      const priceLimit = group.price_limit;
+      const priceStr = priceLimit
+        ? `Limite: R$ ${priceLimit}`
+        : 'Sem limite de preço';
+
+      cards.push({
+        type: 'Organizador',
+        status: statusStr,
+        statusClass,
+        title: group.name,
+        date: group.drawn_at ? 'Sorteio realizado' : 'Aguardando sorteio',
+        priceRange: priceStr,
+        actionLabel: 'Gerenciar',
+        avatars: initialsList.map((init) => ({ initials: init })),
+        routeUrl: `/admin/${group.admin_token}`,
+      });
+
+      dCards.push({
+        name: group.name,
+        status: statusStr,
+        statusClass: group.drawn_at ? 'bg-accent' : 'bg-primary',
+        participants: `${participants.length} participantes`,
+        value: priceStr,
+        action: 'Gerenciar',
+        avatars: initialsList,
+        actionUrl: `/admin/${group.admin_token}`,
+      });
+    }
+
+    // Processar grupos de participante
+    for (const { participant, group, participants } of validPersonalGroups) {
+      const initialsList = participants
+        .slice(0, 3)
+        .map((pt) => this.getInitials(pt.name));
+      const statusStr = group.drawn_at ? 'Sorteado' : 'Aberto';
+      const statusClass = group.drawn_at
+        ? 'border-accent-100 bg-accent-50 text-accent-800'
+        : 'border-primary-100 bg-primary-50 text-primary-800';
+
+      const priceLimit = group.price_limit;
+      const priceStr = priceLimit
+        ? `Limite: R$ ${priceLimit}`
+        : 'Sem limite de preço';
+
+      cards.push({
+        type: 'Participante',
+        status: statusStr,
+        statusClass,
+        title: group.name,
+        date: group.drawn_at ? 'Sorteio realizado' : 'Aguardando sorteio',
+        priceRange: priceStr,
+        actionLabel: group.drawn_at ? 'Revelar Amigo' : 'Ver Detalhes',
+        avatars: initialsList.map((init) => ({ initials: init })),
+        routeUrl: `/revelar/${participant.personal_token}`,
+      });
+
+      dCards.push({
+        name: group.name,
+        status: statusStr,
+        statusClass: group.drawn_at ? 'bg-accent' : 'bg-primary',
+        participants: `${participants.length} participantes`,
+        value: priceStr,
+        action: group.drawn_at ? 'Revelar' : 'Detalhes',
+        avatars: initialsList,
+        actionUrl: `/revelar/${participant.personal_token}`,
+      });
+    }
+
+    this.groups.set(cards);
+    this.desktopGroups.set(dCards);
   }
 
   getInitials(name: string): string {
