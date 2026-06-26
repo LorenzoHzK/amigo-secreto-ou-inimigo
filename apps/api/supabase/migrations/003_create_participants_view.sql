@@ -1,10 +1,13 @@
--- View segura que nunca expõe drawn_participant_id
+-- View segura que nunca expõe drawn_participant_id NEM personal_token.
+-- A view roda com privilégios do dono (não é security_invoker), portanto
+-- ignora RLS e é o canal público de leitura — por isso não pode conter
+-- nenhuma coluna sensível. A busca por personal_token é feita apenas
+-- via RPC get_my_draw (SECURITY DEFINER), escopada ao token do chamador.
 CREATE OR REPLACE VIEW public.participants_public AS
   SELECT
     id,
     group_id,
     name,
-    personal_token,
     revealed_at,
     created_at,
     owner_id
