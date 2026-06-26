@@ -1433,3 +1433,630 @@ npm run functions:deploy
 _Auditoria gerada em 2026-06-25 para o branch `feature/supabase-auth-pwa`._
 _Seções 14–19 adicionadas como proposta de evolução arquitetural._
 _Seção 20 adicionada para especificar a separação arquitetural do monorepo._
+
+---
+
+## Auditoria Pós-Sprint — Versão 2 (2026-06-26)
+
+> Esta seção documenta a auditoria realizada após a implementação completa da sprint por IAs assistentes. Toda a análise foi feita sobre o código real dos arquivos — nenhuma suposição foi inferida. As seções 1–20 permanecem intactas. Novos achados estão classificados por severidade: 🔴 Crítico, 🟠 Alto, 🟡 Médio, 🟢 Baixo.
+
+---
+
+## Seção 21: Segurança — Vulnerabilidades Críticas na Camada de Dados
+
+### 21.1 🔴 `participants_public` expõe `personal_token` (Critical Security Breach)
+
+**Arquivo:** `apps/api/supabase/migrations/003_create_participants_view.sql`
+
+A view `participants_public`, criada para ser a "visão segura sem `drawn_participant_id`", inclui explicitamente `personal_token` em sua definição:
+
+```sql
+CREATE OR REPLACE VIEW public.participants_public AS
+  SELECT
+    id,
+    group_id,
+    name,
+    personal_token,   -- ← PRESENTE NA VIEW "SEGURA"
+    revealed_at,
+    created_at,
+    owner_id
+  FROM public.participants;
+```
+
+O `personal_token` é **o passaporte de acesso de cada participante** ao seu resultado do sorteio. Expô-lo na view significa que qualquer chamada a `getParticipantsByGroupId()` retorna todos os tokens pessoais de todos os participantes do grupo na resposta HTTP. O organizador (e qualquer um com acesso ao painel admin) pode capturar esses tokens via DevTools e revelar o par sorteado de todos.
+
+**Tipo atual em TypeScript:** `ParticipantPublicView = Pick<Participant, 'id' | 'name' | 'created_at'>` — esta tipagem OCULTA o problema porque o serviço usa `any[]`, permitindo que `personal_token` passe sem ser detectado pelo compilador.
+
+**Impacto real:** O sorteio deixa de ser secreto. O administrador pode ver quem tirou quem através dos tokens expostos.
+
+**Correção:**
+
+```sql
+-- Migration: remover personal_token da view
+CREATE OR REPLACE VIEW public.participants_public AS
+  SELECT
+    id,
+    group_id,
+    name,
+    revealed_at,
+    created_at,
+    owner_id
+  FROM public.participants;
+```
+
+---
+
+### 21.2 🔴 Ausência de política SELECT de RLS em `participants` quebra a funcionalidade
+
+**Arquivo:** `apps/api/supabase/migrations/005_apply_rls.sql`
+
+A migration habilita RLS na tabela `participants` e cria políticas de INSERT e DELETE, mas **não cria nenhuma política de SELECT**:
+
+```sql
+ALTER TABLE public.participants ENABLE ROW LEVEL SECURITY;
+-- ... políticas de INSERT e DELETE ...
+-- NENHUMA política de SELECT criada
+```
+
+Em PostgreSQL com RLS habilitado, a política padrão para roles sem política explícita é **negar tudo** (deny-by-default). Isso significa que `anon` e `authenticated` não conseguem selecionar linhas da tabela `participants`. Como a view `participants_public` está sobre essa tabela, **as consultas de participantes retornam 0 resultados** no ambiente local com `db:reset`.
+
+**Consequências:**
+- `getParticipantsByGroupId()` retorna `[]` para todos os grupos
+- A página admin mostra "Nenhum participante adicionado ainda" mesmo com participantes cadastrados
+- A verificação de duplicados em `JoinPage` passa sempre (já que nenhum participante é retornado)
+- `getParticipantByPersonalToken()` retorna `null` para todos os tokens
+
+**Correção:**
+
+```sql
+-- Adicionar política SELECT permissiva na participants
+-- (a segurança real vem da view não expor drawn_participant_id e personal_token)
+CREATE POLICY "participants_public_select"
+  ON public.participants
+  FOR SELECT
+  USING (true);
+```
+
+---
+
+### 21.3 🔴 Tokens de segurança gerados no cliente
+
+**Arquivos:** `apps/web/src/app/core/services/group.service.ts`, `apps/web/src/app/core/services/participant.service.ts`
+
+Três tokens críticos de segurança são gerados pelo browser do cliente:
+
+```typescript
+// GroupService.createGroup
+const newGroup = {
+  id: crypto.randomUUID(),
+  admin_token: crypto.randomUUID(),   // ← gerado no cliente
+  invite_token: crypto.randomUUID(),  // ← gerado no cliente
+  ...
+};
+
+// ParticipantService.addParticipant
+const newParticipant = {
+  id: crypto.randomUUID(),
+  personal_token: crypto.randomUUID(),  // ← gerado no cliente
+  ...
+};
+```
+
+**Problema:** A política RLS `groups_public_insert` usa `WITH CHECK (true)` — aceita qualquer valor sem validação. Isso significa que um cliente malicioso pode:
+1. Enviar `admin_token: "senha123"` para criar um grupo com token previsível
+2. Enviar `personal_token: "meu-token"` para um participante, assumindo controle do token de revelação
+
+**Correção — gerar tokens server-side via defaults de coluna:**
+
+```sql
+-- Nas colunas do banco (schema inicial ou migration):
+admin_token   uuid NOT NULL DEFAULT gen_random_uuid(),
+invite_token  uuid NOT NULL DEFAULT gen_random_uuid(),
+personal_token uuid NOT NULL DEFAULT gen_random_uuid(),
+```
+
+E remover a geração client-side dos serviços, enviando apenas os campos de negócio (name, price_limit, reveal_date, owner_id).
+
+---
+
+### 21.4 🟠 `groups_public_select` expõe `admin_token` para todos
+
+**Arquivo:** `apps/api/supabase/migrations/005_apply_rls.sql`
+
+```sql
+CREATE POLICY "groups_public_select"
+  ON public.groups
+  FOR SELECT
+  USING (true);
+```
+
+A política permite que qualquer role leia todos os registros da tabela `groups`, incluindo o campo `admin_token`. Qualquer usuário que souber o `id` de um grupo pode buscar seu `admin_token` e assumir controle administrativo do grupo.
+
+No modelo atual, o `admin_token` funciona como senha do administrador. Expô-lo via SELECT irrestrito é equivalente a armazenar senhas sem hash.
+
+**Mitigação de curto prazo:** Criar uma view `groups_public` que exclui `admin_token`, similar ao que foi feito com `participants`. Aplicar RLS que restrinja SELECT de `admin_token` ao `owner_id`.
+
+---
+
+## Seção 22: Qualidade de Código — Type Safety
+
+### 22.1 🟠 `ParticipantService` usa `any[]` em todos os métodos de leitura
+
+**Arquivo:** `apps/web/src/app/core/services/participant.service.ts`
+
+```typescript
+// Retorna any[] temporariamente para manter compatibilidade com componentes legados
+async getParticipantsByGroupId(groupId: string): Promise<any[]> { ... }
+async getParticipantByPersonalToken(token: string): Promise<any | null> { ... }
+async getParticipantById(id: string): Promise<any | null> { ... }
+```
+
+O sprint (Story S7) especificou explicitamente `ParticipantPublicView[]` como tipo de retorno. O comentário "temporariamente para manter compatibilidade com componentes legados" sugere que a IA resistiu à tipagem correta por medo de quebrar páginas. Mas nenhum componente usa os campos extras de forma que necessite de `any` — apenas `name` e `id` são usados nos templates.
+
+**Impacto:** O TypeScript não detecta o `personal_token` extra sendo retornado pela view (vide Seção 21.1). O problema de segurança existe mas é invisível ao compilador.
+
+**Correção:**
+
+```typescript
+async getParticipantsByGroupId(groupId: string): Promise<ParticipantPublicView[]> {
+  return firstValueFrom(
+    this.supabase.select<ParticipantPublicView>(this.publicView, { ... }),
+  );
+}
+```
+
+---
+
+### 22.2 🟠 `AdminPage` propaga `any[]` via `resource<any[], ...>`
+
+**Arquivo:** `apps/web/src/app/features/admin/admin.page.ts`
+
+```typescript
+readonly participantsResource = resource<any[], { groupId: string | undefined }>({ ... });
+readonly participants = computed<any[]>(() => this.participantsResource.value() ?? []);
+```
+
+A tipagem incorreta do `ParticipantService` se propagou para a página. Após corrigir o serviço (22.1), estas linhas devem ser atualizadas para `resource<ParticipantPublicView[], ...>` e `computed<ParticipantPublicView[]>`.
+
+---
+
+### 22.3 🟡 `GroupsPage` usa `any` internamente em múltiplos pontos
+
+**Arquivo:** `apps/web/src/app/features/groups/groups.page.ts`
+
+```typescript
+const validAdminGroups = adminGroupsResults.filter(
+  (r): r is { group: any; participants: any[] } => r !== null,
+);
+```
+
+O type predicate usa `any` para escapar da tipagem. Após corrigir o `ParticipantService`, este filtro pode ser tipado como `{ group: Group; participants: ParticipantPublicView[] }`.
+
+---
+
+### 22.4 🟢 `GroupService.createGroup` com assinatura sobrecarregada desnecessária
+
+**Arquivo:** `apps/web/src/app/core/services/group.service.ts`
+
+```typescript
+async createGroup(
+  payloadOrName: CreateGroupPayload | string,  // ← union desnecessária
+  priceLimit?: number | null,
+): Promise<Group>
+```
+
+Apenas `CreateGroupPage` chama este método, e sempre passa `CreateGroupPayload`. A sobrecarga de string não é utilizada por nenhum componente ativo. É tech debt de compatibilidade sem caller real.
+
+---
+
+## Seção 23: Arquitetura Angular — Inconsistências de Padrão
+
+### 23.1 🟡 `GroupsPage` usa `OnInit` imperativo em vez de `resource()`
+
+**Arquivo:** `apps/web/src/app/features/groups/groups.page.ts`
+
+```typescript
+export class GroupsPage implements OnInit {
+  ngOnInit(): void {
+    void this.loadGroups();
+  }
+
+  async loadGroups(): Promise<void> {
+    this.isLoading.set(true);
+    // ... lógica imperativa ...
+  }
+}
+```
+
+`AdminPage` e `RevealPage` usam `resource()` com reatividade declarativa. `GroupsPage` usa o padrão imperativo com `ngOnInit` + sinais manuais. Isso cria inconsistência no codebase e viola o padrão definido pelo sprint (Story S9).
+
+A situação é mais complexa porque `GroupsPage` lida com dois sources de dados diferentes (autenticado vs. localStorage), o que dificulta o uso de `resource()` diretamente. O padrão correto seria:
+
+```typescript
+readonly groupsResource = resource({
+  params: () => ({ userId: this.auth.user()?.id }),
+  loader: ({ params }) =>
+    params.userId
+      ? this.loadFromDatabase(params.userId)
+      : this.loadFromLocalStorage(),
+});
+```
+
+---
+
+### 23.2 🟡 N+1 queries em `GroupsPage.loadGroupsFromLocalStorage()`
+
+**Arquivo:** `apps/web/src/app/features/groups/groups.page.ts`
+
+Para cada admin token armazenado, a página faz:
+1. `getGroupByAdminToken(token)` → 1 query
+2. `getParticipantsByGroupId(group.id)` → 1 query
+
+Para N grupos: **2N queries paralelas** (via `Promise.all`, correto), mas em seguida para personal tokens:
+1. `getParticipantByPersonalToken(token)` → 1 query
+2. `getGroupById(group_id)` → 1 query
+3. `getParticipantsByGroupId(group.id)` → 1 query
+
+Para M participações: **3M queries adicionais**.
+
+Total: `2N + 3M` round-trips HTTP. Para um usuário com 5 grupos criados e 5 participações: **25 requests** para renderizar a página.
+
+**Solução ideal:** Um RPC (função PostgreSQL) que retorna todos os grupos + contagem de participantes em uma única query. Ou pelo menos `select=*,participants_public(count)` via PostgREST nested query.
+
+---
+
+### 23.3 🟡 `authInterceptor` importa `environment` diretamente
+
+**Arquivo:** `apps/web/src/app/core/interceptors/auth.interceptor.ts`
+
+```typescript
+import { environment } from '../../../environments/environment';
+
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  if (!req.url.startsWith(environment.supabaseUrl)) {
+    return next(req);
+  }
+  const auth = inject(AuthService);
+  const token = auth.accessToken();
+  const headers = req.headers
+    .set('apikey', environment.supabaseAnonKey)
+    ...
+};
+```
+
+Todo o restante do codebase usa `inject(SUPABASE_URL)` e `inject(SUPABASE_ANON_KEY)` via tokens DI. O interceptor quebra esse padrão ao importar `environment` diretamente, tornando-o não-testável de forma isolada e criando uma dependência hard-coded que não pode ser substituída em testes.
+
+**Correção:**
+
+```typescript
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const supabaseUrl = inject(SUPABASE_URL);
+  const supabaseAnonKey = inject(SUPABASE_ANON_KEY);
+  if (!req.url.startsWith(supabaseUrl)) return next(req);
+  ...
+};
+```
+
+---
+
+### 23.4 🟢 `JoinPage` usa `signal` + `effect` em vez de `resource()` para carregar grupo
+
+**Arquivo:** `apps/web/src/app/features/join/join.page.ts`
+
+```typescript
+readonly group = signal<Group | null>(null);
+readonly isLoading = signal(true);
+readonly error = signal<string | null>(null);
+
+constructor() {
+  effect(() => {
+    const token = this.inviteToken();
+    if (token) void this.loadGroup(token);
+  });
+}
+```
+
+Poderia ser substituído por:
+
+```typescript
+readonly groupResource = resource<Group | null, { token: string }>({
+  params: () => ({ token: this.inviteToken() }),
+  loader: ({ params }) => this.groupService.getGroupByInviteToken(params.token),
+});
+```
+
+Menor prioridade que `GroupsPage` pois `JoinPage` é uma página de baixa complexidade.
+
+---
+
+## Seção 24: Backend — Migrations e Edge Function
+
+### 24.1 🟠 Migration 002: `CREATE TRIGGER` sem `DROP TRIGGER IF EXISTS` — não idempotente
+
+**Arquivo:** `apps/api/supabase/migrations/002_add_columns.sql`
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_updated_at() ...   -- idempotente ✓
+CREATE TRIGGER groups_set_updated_at ...                  -- NÃO idempotente ✗
+```
+
+A função usa `CREATE OR REPLACE` (idempotente), mas o trigger usa `CREATE TRIGGER` sem `DROP TRIGGER IF EXISTS`. Na segunda execução de `supabase db reset` em uma instância que já rodou esta migration, o comando falha com:
+
+```
+ERROR: trigger "groups_set_updated_at" for relation "groups" already exists
+```
+
+**Correção:**
+
+```sql
+DROP TRIGGER IF EXISTS groups_set_updated_at ON public.groups;
+CREATE TRIGGER groups_set_updated_at
+  BEFORE UPDATE ON public.groups
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+```
+
+---
+
+### 24.2 🟠 Edge Function: updates de participantes não são atômicos
+
+**Arquivo:** `apps/api/supabase/functions/perform-draw/index.ts`
+
+```typescript
+const updatePromises = participants.map((participant, index) =>
+  supabase.from('participants')
+    .update({ drawn_participant_id: shuffled[index].id })
+    .eq('id', participant.id)
+);
+const updateResults = await Promise.all(updatePromises);
+```
+
+O sorteio atualiza cada participante em uma requisição HTTP separada via PostgREST. Se a 5ª de 8 requisições falhar (timeout, conexão, etc.), os primeiros 4 participantes têm `drawn_participant_id` definido mas os demais não. O mecanismo de rollback:
+
+```typescript
+await supabase.from('participants')
+  .update({ drawn_participant_id: null })
+  .eq('group_id', group.id);
+```
+
+...também não é atômico e pode falhar. O grupo ficaria em estado inconsistente.
+
+**Solução correta:** Encapsular toda a lógica do sorteio em uma stored function PostgreSQL (SECURITY DEFINER) que execute dentro de uma transação:
+
+```sql
+CREATE OR REPLACE FUNCTION public.perform_draw(p_admin_token text)
+RETURNS json
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+BEGIN
+  -- toda a lógica dentro de uma transação implícita do PostgreSQL
+  -- atualização em batch com UPDATE ... FROM
+END;
+$$;
+```
+
+A Edge Function passaria apenas a responsabilidade de invocar o RPC, eliminando os N updates separados.
+
+---
+
+### 24.3 🟡 Seed.sql usa tokens não-UUID (inconsistência com schema)
+
+**Arquivo:** `apps/api/supabase/seed.sql`
+
+```sql
+INSERT INTO public.groups (..., admin_token, invite_token, ...)
+VALUES (..., 'admin-token-demo-1234', 'invite-token-demo-5678', ...);
+```
+
+O schema usa `uuid` para `admin_token` e `invite_token`, mas o seed usa strings arbitrárias. Isso:
+1. Viola o tipo da coluna se ela for declarada como `uuid` (causaria erro de inserção)
+2. Se a coluna for `text`, reforça que o sistema aceita qualquer string como token
+
+Com a correção de gerar tokens server-side (Seção 21.3), o seed não precisaria fornecer tokens — apenas os campos de negócio.
+
+---
+
+### 24.4 🟢 `getMyDraw` não registra `revealed_at` antes de retornar quando sorteio ainda não ocorreu
+
+**Arquivo:** `apps/api/supabase/migrations/004_create_rpc_get_my_draw.sql`
+
+Quando `v_group.drawn_at IS NULL`, a função retorna com `drawn: NULL`. Nenhum problema aqui — correto por design.
+
+Quando `drawn_at` não é nulo, a função registra `revealed_at` e retorna o par. Comportamento correto ✓.
+
+O único ponto de atenção: se o participante chamar `get_my_draw` múltiplas vezes após o sorteio, o `UPDATE revealed_at` só ocorre na primeira chamada (`IF v_participant.revealed_at IS NULL`). Isso é correto e eficiente.
+
+---
+
+## Seção 25: Plano de Ação Priorizado
+
+### 25.1 Backlog de Correções — Por Severidade
+
+| # | Severidade | Componente | Problema | Esforço |
+|---|-----------|-----------|---------|---------|
+| 1 | 🔴 Crítico | Migration 003 | Remover `personal_token` de `participants_public` | 5min |
+| 2 | 🔴 Crítico | Migration 005 | Adicionar política SELECT em `participants` | 5min |
+| 3 | 🔴 Crítico | GroupService / ParticipantService | Remover geração client-side de tokens de segurança | 30min |
+| 4 | 🟠 Alto | ParticipantService | Substituir `any[]` por `ParticipantPublicView[]` | 15min |
+| 5 | 🟠 Alto | AdminPage | Corrigir `resource<any[], ...>` após #4 | 5min |
+| 6 | 🟠 Alto | Migration 002 | Adicionar `DROP TRIGGER IF EXISTS` | 2min |
+| 7 | 🟠 Alto | Migration 005 | Criar view `groups_public` sem `admin_token` + RLS SELECT | 20min |
+| 8 | 🟡 Médio | authInterceptor | Substituir `environment` por injection tokens | 10min |
+| 9 | 🟡 Médio | GroupsPage | Migrar para `resource()` + reduzir N+1 queries | 2h |
+| 10 | 🟡 Médio | Edge Function | Encapsular sorteio em stored function transacional | 1h |
+| 11 | 🟡 Médio | GroupService | Remover sobrecarga de string em `createGroup` | 10min |
+| 12 | 🟢 Baixo | CreateGroupPage | Corrigir `reveal_date` timezone (usar `revealDateRaw + 'T12:00:00'`) | 5min |
+| 13 | 🟢 Baixo | JoinPage | Migrar para `resource()` | 30min |
+
+### 25.2 Sequência Recomendada de Implementação
+
+**Sprint de Correções Críticas (urgente — impacto em segurança e funcionalidade):**
+
+**S-FIX-1:** Corrigir a view `participants_public` e a política de SELECT
+
+```sql
+-- Nova migration: 006_fix_participants_security.sql
+
+-- 1. Remover personal_token da view
+CREATE OR REPLACE VIEW public.participants_public AS
+  SELECT id, group_id, name, revealed_at, created_at, owner_id
+  FROM public.participants;
+
+-- 2. Adicionar política SELECT
+CREATE POLICY "participants_public_select"
+  ON public.participants
+  FOR SELECT
+  USING (true);
+
+-- 3. Criar view groups_public sem admin_token
+CREATE OR REPLACE VIEW public.groups_public AS
+  SELECT id, name, invite_token, price_limit, reveal_date, status, drawn_at, created_at
+  FROM public.groups;
+
+GRANT SELECT ON public.groups_public TO anon, authenticated;
+```
+
+**S-FIX-2:** Gerar tokens server-side
+
+```sql
+-- Nova migration: 007_server_side_tokens.sql
+ALTER TABLE public.groups
+  ALTER COLUMN admin_token SET DEFAULT gen_random_uuid(),
+  ALTER COLUMN invite_token SET DEFAULT gen_random_uuid();
+
+ALTER TABLE public.participants
+  ALTER COLUMN personal_token SET DEFAULT gen_random_uuid();
+```
+
+Atualizar `GroupService.createGroup` para não enviar `admin_token`, `invite_token`:
+
+```typescript
+const newGroup = {
+  id: crypto.randomUUID(),
+  name: payload.name,
+  price_limit: payload.price_limit,
+  reveal_date: payload.reveal_date,
+  status: 'open' as const,
+  drawn_at: null,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  owner_id: payload.owner_id ?? null,
+  // admin_token e invite_token omitidos → gerados pelo banco
+};
+```
+
+O PostgREST retorna a row completa com os tokens gerados pelo banco se a query usar `Prefer: return=representation`.
+
+**S-FIX-3:** Tipar `ParticipantService` + corrigir `AdminPage`
+
+**S-FIX-4:** `DROP TRIGGER IF EXISTS` na migration 002
+
+### 25.3 Arquivos com Dívida Técnica Documentada
+
+| Arquivo | Dívida | Status recomendado |
+|---------|--------|-------------------|
+| `participant.service.ts` | Comentário "temporariamente" presente há toda a sprint | Resolver em S-FIX-3 |
+| `group.service.ts` | `createGroup(payloadOrName: CreateGroupPayload \| string)` | Remover sobrecarga em refactor |
+| `groups.page.ts` | `OnInit` + N+1 queries | Refatorar com `resource()` em sprint seguinte |
+| `auth.interceptor.ts` | `import environment` direto | Corrigir junto com S-FIX-3 |
+
+---
+
+## Seção 26: Verificação de Conformidade com o Sprint
+
+### 26.1 O que foi implementado corretamente
+
+| Requisito | Implementação | Conformidade |
+|-----------|--------------|-------------|
+| Standalone components | Todas as páginas: `standalone: true` | ✅ |
+| `ChangeDetectionStrategy.OnPush` | Presente em todas as páginas | ✅ |
+| `resource()` API para fetching | AdminPage, RevealPage | ✅ parcial |
+| Guards funcionais (`CanActivateFn`) | auth, guest, adminToken, inviteToken | ✅ |
+| `inject()` em vez de construtor | Usado em todos os serviços | ✅ |
+| `input.required<>()` | AdminPage, RevealPage, JoinPage | ✅ |
+| `computed()` para estado derivado | Utilizado extensamente | ✅ |
+| `effect()` para side effects | AdminPage (localStorage), JoinPage | ✅ |
+| Conventional commits | Commits realizados pela IA ✓ | ✅ |
+| Monorepo `apps/api` scaffolded | Migrations + Edge Function + seed | ✅ |
+| RLS habilitado | Migrations 003 e 005 | ✅ parcial |
+| `participants_public` view | Criada — mas com `personal_token` | ⚠️ |
+| `get_my_draw` RPC SECURITY DEFINER | Implementado corretamente | ✅ |
+| Edge Function `perform-draw` | Implementada — mas não atômica | ⚠️ |
+| Derangement algorithm server-side | Correto, max 2000 tentativas | ✅ |
+| Token-based routing | `adminTokenGuard`, `inviteTokenGuard` | ✅ |
+| `ParticipantPublicView[]` nos serviços | Não aplicado (`any[]` usado) | ❌ |
+| Tokens gerados server-side | Ainda gerados no cliente | ❌ |
+
+### 26.2 Resumo Executivo
+
+A implementação da sprint foi bem-sucedida em ~85% dos requisitos. A estrutura Angular está moderna, reativa e consistente com o padrão esperado. As guards, interceptors, serviços e modelos estão bem organizados.
+
+Os 15% restantes concentram-se em três áreas de alto impacto:
+
+1. **Segurança de dados no banco:** A view `participants_public` expõe `personal_token`, a política SELECT de RLS não existe (quebra funcionalidade), e os tokens de segurança são gerados no cliente.
+
+2. **Type safety:** O `any[]` no `ParticipantService` oculta os problemas de segurança e viola o requisito explícito do sprint.
+
+3. **Atomicidade do sorteio:** O `perform-draw` usa N requests HTTP em vez de uma stored function transacional.
+
+Corrigir os itens da Seção 25.2 (urgente) resolve os problemas críticos sem alterações de arquitetura — são apenas patches cirúrgicos em migrations e tipagens.
+
+---
+
+_Auditoria Pós-Sprint gerada em 2026-06-26 para o branch `feature/supabase-auth-pwa`._
+_Seções 21–26 adicionadas como análise da implementação completa da sprint._
+
+---
+
+## Seção 27: Revisão Durante a Implementação (2026-06-26)
+
+> Esta seção corrige dois diagnósticos das Seções 21–26 que se mostraram imprecisos quando as correções começaram a ser implementadas. Mantemos as seções originais intactas (evolução, não reescrita) e registramos aqui o entendimento correto.
+
+### 27.1 Correção do achado 21.2 — A política SELECT ausente NÃO quebra a leitura
+
+O achado 21.2 afirmou que a ausência de política SELECT de RLS em `participants` faria as consultas retornarem `[]`. **Isso está incorreto.**
+
+As leituras de participantes passam pela **view** `participants_public`, não pela tabela base. Uma view criada sem `WITH (security_invoker = true)` (o caso desta migration) executa com os privilégios do **dono da view** (`postgres`), que **ignora RLS** e os `REVOKE`s aplicados a `anon`/`authenticated`. Portanto:
+
+- `getParticipantsByGroupId()` funciona normalmente via view, mesmo sem política SELECT na tabela base.
+- Adicionar `CREATE POLICY ... FOR SELECT USING (true)` na tabela base seria um **no-op** para `anon` (o `GRANT SELECT` foi revogado em 003; RLS só atua após o grant existir) e irrelevante para `service_role` (que já ignora RLS).
+
+**Conclusão:** o item #2 da Seção 25.1 e o trecho correspondente em S-FIX-1 (Seção 25.2) **não devem ser implementados**. Não há bug de funcionalidade aqui.
+
+> ⚠️ Observação de segurança secundária: o fato de a view ignorar RLS é exatamente o que torna a correção 21.1 (remover `personal_token` da view) **indispensável** — a view é o canal de exposição pública e não filtra por linha.
+
+### 27.2 Correção do achado 21.3 (parte participantes) — token server-side exige RPC, não apenas DEFAULT
+
+O achado 21.3 propôs gerar todos os tokens server-side via `DEFAULT gen_random_uuid()`. Para **`groups`** isso funciona: a tabela mantém `GRANT SELECT` para `anon`, então o `INSERT ... RETURNING` (representação do PostgREST) devolve o `admin_token` gerado para o cliente navegar até o painel.
+
+Para **`participants`**, porém, o `GRANT SELECT` foi **revogado** na migration 003. Em PostgreSQL, `INSERT ... RETURNING` exige privilégio `SELECT` nas colunas retornadas. Logo, um insert direto via PostgREST com `Prefer: return=representation` **falharia** ao tentar devolver o `personal_token` recém-gerado — e o fluxo de entrada (`JoinPage` navega para `/revelar/:personal_token`) quebraria.
+
+**Conclusão:** mover o `personal_token` para server-side exige uma RPC `SECURITY DEFINER` (ex.: `join_group`) que insere e retorna o token escopo do próprio chamador — análoga à `get_my_draw`. Isso fica registrado como evolução futura (não implementado neste lote por exigir verificação com banco em execução via `npm run db:reset`).
+
+### 27.3 Refinamento do achado 21.1 — remover `personal_token` da view exige migrar a busca por token
+
+Remover `personal_token` de `participants_public` quebra `getParticipantByPersonalToken()`, que **filtra** pela coluna (PostgREST não filtra por coluna ausente na view). A correção completa, portanto, inclui:
+
+1. Substituir o uso de `getParticipantByPersonalToken()` (apenas em `GroupsPage`, path localStorage) pela RPC segura `get_my_draw`, que já resolve participante + grupo a partir do token.
+2. Remover `getParticipantByPersonalToken()` e `getParticipantById()` (este último era código morto) do `ParticipantService`.
+3. Só então remover `personal_token` da view.
+
+Esse encadeamento foi implementado nos commits desta entrega.
+
+### 27.4 Status final de implementação deste lote
+
+| Achado | Decisão | Status |
+|--------|---------|--------|
+| 21.1 — `personal_token` na view | Corrigir (com migração da busca para RPC) | ✅ Implementado |
+| 21.2 — política SELECT ausente | **Descartado** — diagnóstico incorreto (ver 27.1) | ❌ Não aplicável |
+| 21.3 — tokens client-side (groups) | Corrigir via `DEFAULT` + `Prefer: return=representation` | ✅ Implementado |
+| 21.3 — tokens client-side (participants) | Exige RPC `join_group` (ver 27.2) | ⏳ Evolução futura |
+| 21.4 — `admin_token` exposto | Criar view `groups_public` (mitigação/infra) | ✅ View criada; lockdown da tabela base requer RPC `create_group` (futuro) |
+| 22.1/22.2 — `any[]` no ParticipantService | Tipar com `ParticipantPublicView` | ✅ Implementado |
+| 23.3 — `authInterceptor` usa `environment` | Migrar para injection tokens | ✅ Implementado |
+| 24.1 — trigger não idempotente | `DROP TRIGGER IF EXISTS` | ✅ Implementado |
+| 23.1/23.2 — `GroupsPage` imperativo + N+1 | Refator maior | ⏳ Evolução futura |
+| 24.2 — sorteio não atômico | Stored function transacional | ⏳ Evolução futura |
+
+---
+
+_Seção 27 adicionada durante a implementação das correções, registrando ajustes de diagnóstico descobertos no código real._
