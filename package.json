@@ -12,6 +12,7 @@
     "dev": "concurrently -n \"WEB,API\" -c \"cyan,green\" \"npm run dev:web\" \"npm run dev:api\"",
     "build:web": "npm run build -w apps/web",
     "test:web": "npm run test -w apps/web",
+    "test:unit": "npm run test:unit -w apps/web",
     "lint:web": "npm run lint -w apps/web",
     "db:push": "npm run db:push -w apps/api",
     "db:reset": "npm run db:reset -w apps/api",
