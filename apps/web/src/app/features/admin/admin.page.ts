@@ -19,6 +19,7 @@ import { GroupService } from '../../core/services/group.service';
 import { ParticipantService } from '../../core/services/participant.service';
 import { DrawService } from '../../core/services/draw.service';
 import { ApiErrorService } from '../../core/services/api-error.service';
+import { AuthService } from '../../core/services/auth.service';
 import { InitialsPipe } from '../../shared/pipes/initials.pipe';
 import { Group, Participant } from '../../core/models';
 
@@ -66,7 +67,7 @@ import { Group, Participant } from '../../core/models';
         >
           {{ group()?.name || 'Carregando...' }}
         </p>
-        <app-avatar initials="AD" />
+        <app-avatar [initials]="organizerInitials() | initials" />
       </header>
 
       <main class="flex-1 space-y-5 px-6 pb-8">
@@ -343,6 +344,14 @@ export class AdminPage {
   private readonly participantService = inject(ParticipantService);
   private readonly drawService = inject(DrawService);
   private readonly apiError = inject(ApiErrorService);
+  readonly auth = inject(AuthService);
+
+  readonly organizerInitials = computed(() => {
+    const name = this.auth.user()?.user_metadata?.['display_name'] as string | undefined
+      ?? this.auth.user()?.email
+      ?? 'AD';
+    return name;
+  });
 
   readonly group = signal<Group | null>(null);
   readonly participants = signal<Participant[]>([]);
