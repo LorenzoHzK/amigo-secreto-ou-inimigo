@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   input,
@@ -190,7 +191,7 @@ import { Group, Participant } from '../../core/models';
 
           <button
             type="button"
-            [disabled]="participants().length < 3"
+            [disabled]="participants().length < 3 || isDrawn()"
             class="bg-primary shadow-brand-lg hover:bg-primary-700 focus:ring-primary-300 min-h-14 w-full rounded-full px-8 text-base font-extrabold text-white transition focus:ring-2 focus:ring-offset-2 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             (click)="drawNames()"
           >
@@ -268,7 +269,7 @@ import { Group, Participant } from '../../core/models';
             </article>
             <button
               type="button"
-              [disabled]="participants().length < 3"
+              [disabled]="participants().length < 3 || isDrawn()"
               class="bg-primary shadow-brand-lg hover:bg-primary-700 focus:ring-primary-300 w-full rounded-full px-8 py-5 text-lg font-extrabold text-white transition focus:ring-2 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               (click)="drawNames()"
             >
@@ -341,6 +342,7 @@ export class AdminPage {
   readonly participants = signal<Participant[]>([]);
   readonly isLoading = signal<boolean>(true);
   readonly error = signal<string | null>(null);
+  readonly isDrawn = computed(() => this.group()?.drawn_at !== null);
 
   readonly copyLabel = signal<string>('Copiar Link');
   readonly drawLabel = signal<string>('🎉 Sortear Nomes');
@@ -442,11 +444,11 @@ export class AdminPage {
 
   async drawNames(): Promise<void> {
     const g = this.group();
-    if (!g) return;
+    if (!g || this.isDrawn()) return;
 
     this.drawLabel.set('Sorteando...');
     try {
-      await this.drawService.draw(g.id);
+      await this.drawService.draw(this.adminToken());
       this.drawLabel.set('Sorteio realizado ✓');
       await this.loadData(this.adminToken());
     } catch (err) {
