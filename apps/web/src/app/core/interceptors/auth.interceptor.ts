@@ -1,18 +1,21 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { environment } from '../../../environments/environment';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../tokens/supabase.tokens';
 import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!req.url.startsWith(environment.supabaseUrl)) {
+  const supabaseUrl = inject(SUPABASE_URL);
+  const supabaseAnonKey = inject(SUPABASE_ANON_KEY);
+
+  if (!req.url.startsWith(supabaseUrl)) {
     return next(req);
   }
 
   const auth = inject(AuthService);
   const token = auth.accessToken();
   const headers = req.headers
-    .set('apikey', environment.supabaseAnonKey)
-    .set('Authorization', `Bearer ${token ?? environment.supabaseAnonKey}`);
+    .set('apikey', supabaseAnonKey)
+    .set('Authorization', `Bearer ${token ?? supabaseAnonKey}`);
 
   return next(req.clone({ headers }));
 };
