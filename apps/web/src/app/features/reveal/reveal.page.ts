@@ -412,5 +412,7 @@ export class RevealPage {
     if (!this.canReveal()) return;
     this.isRevealed.set(true);
     this.revealLabel.set('Resultado revelado ✓');
+    // Registra o momento real da revelação (RPC sem efeito colateral na leitura).
+    void this.revealService.markRevealed(this.personalToken());
   }
 }

@@ -364,15 +364,17 @@ export class GroupsPage implements OnInit {
     //    expor o token em nenhuma resposta de SELECT.
     const personalParticipantsResults = await Promise.all(
       storedPersonal.map(async (token) => {
-        const draw = await this.revealService.getMyDraw(token);
-        if (!draw) return null;
+        const participation = await this.revealService.getMyParticipation(token);
+        if (!participation) return null;
 
         // Se já carregamos este grupo como administrador, não faz sentido buscar grupo/participantes novamente
-        if (adminGroupIds.has(draw.group.id)) return null;
+        if (adminGroupIds.has(participation.group.id)) return null;
 
         const participants =
-          await this.participantService.getParticipantsByGroupId(draw.group.id);
-        return { token, group: draw.group, participants };
+          await this.participantService.getParticipantsByGroupId(
+            participation.group.id,
+          );
+        return { token, group: participation.group, participants };
       }),
     );
 

@@ -53,12 +53,9 @@ BEGIN
   FROM public.participants
   WHERE id = v_participant.drawn_participant_id;
 
-  -- Registrar timestamp da revelação (se ainda não revelou)
-  IF v_participant.revealed_at IS NULL THEN
-    UPDATE public.participants
-    SET revealed_at = now()
-    WHERE id = v_participant.id;
-  END IF;
+  -- IMPORTANTE: esta função é apenas leitura (sem efeito colateral).
+  -- A marcação de revealed_at é feita pela RPC mark_revealed, chamada
+  -- no clique de "Revelar" — ver migration 008.
 
   -- Retornar resultado com nome do par (NUNCA o drawn_participant_id bruto)
   RETURN json_build_object(

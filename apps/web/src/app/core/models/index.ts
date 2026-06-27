@@ -60,6 +60,12 @@ export interface MyDrawResult {
   drawn: { id: string; name: string } | null;
 }
 
+// Resultado da RPC get_my_participation (leitura pura, sem o par sorteado)
+export interface MyParticipationResult {
+  participant: { id: string; name: string };
+  group: GroupPublicView;
+}
+
 // ===== CONTEXTOS DE TOKEN =====
 
 export interface AdminTokenContext {
