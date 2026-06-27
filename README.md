@@ -242,11 +242,15 @@ As migrations ficam em `apps/api/supabase/migrations/` e são aplicadas em ordem
 
 | Migration | Descrição |
 |-----------|-----------|
+| `000_init_schema.sql` | Schema base: tabelas `groups` e `participants` |
 | `001_add_indexes.sql` | Índices de performance nos tokens |
 | `002_add_columns.sql` | Colunas `status`, `reveal_date`, `updated_at`, `revealed_at` |
-| `003_create_participants_view.sql` | View `participants_public` (sem `drawn_participant_id`) |
-| `004_create_rpc_get_my_draw.sql` | RPC `get_my_draw` para revelação segura |
+| `003_create_participants_view.sql` | View `participants_public` (sem `drawn_participant_id` nem `personal_token`) |
+| `004_create_rpc_get_my_draw.sql` | RPC `get_my_draw` (leitura do par sorteado) |
 | `005_apply_rls.sql` | Row Level Security policies |
+| `006_create_groups_public_view.sql` | View `groups_public` (sem `admin_token`) |
+| `007_server_side_group_tokens.sql` | `DEFAULT gen_random_uuid()` em `admin_token`/`invite_token` |
+| `008_split_reveal_rpcs.sql` | RPCs `get_my_participation` e `mark_revealed` |
 
 Para detalhes e setup do banco, ver [apps/api/README.md](./apps/api/README.md).
 
