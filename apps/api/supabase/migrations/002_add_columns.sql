@@ -24,6 +24,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS groups_set_updated_at ON public.groups;
 CREATE TRIGGER groups_set_updated_at
   BEFORE UPDATE ON public.groups
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
