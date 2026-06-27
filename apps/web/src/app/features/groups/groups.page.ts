@@ -154,7 +154,7 @@ interface GroupMock {
           class="bg-primary shadow-brand-lg hover:bg-primary-700 focus:ring-primary-300 rounded-full px-7 py-4 text-base font-extrabold text-white transition focus:ring-2 focus:outline-none active:scale-[0.98]"
           (click)="goToCreate()"
         >
-          Nova Troca
+          Novo Grupo
         </button>
       </header>
 
@@ -195,40 +195,6 @@ interface GroupMock {
         </button>
       </section>
 
-      <section
-        class="bg-neutral mt-10 flex min-h-64 items-center justify-between gap-8 overflow-hidden rounded-[2.5rem] p-10 text-white shadow-[0_24px_70px_rgba(26,26,46,0.16)]"
-      >
-        <div class="max-w-xl">
-          <p
-            class="text-primary-200 text-xs font-black tracking-[0.18em] uppercase"
-          >
-            Modo especial
-          </p>
-          <h2 class="mt-3 text-4xl leading-tight font-black">
-            Amigo Inimigo:<br />A Arte da Trolagem
-          </h2>
-          <p class="mt-4 text-base leading-7 text-white/65">
-            Transforme a troca em um desafio criativo, com regras leves e
-            presentes inesperados.
-          </p>
-        </div>
-        <div class="flex gap-4">
-          <button
-            type="button"
-            class="bg-primary shadow-brand hover:bg-primary-700 focus:ring-primary-300 rounded-full px-7 py-4 text-sm font-extrabold text-white transition focus:ring-2 focus:outline-none active:scale-[0.98]"
-            (click)="activateEnemyMode()"
-          >
-            {{ enemyLabel() }}
-          </button>
-          <button
-            type="button"
-            class="text-neutral hover:bg-primary-50 rounded-full bg-white px-7 py-4 text-sm font-extrabold transition focus:ring-2 focus:ring-white focus:outline-none active:scale-[0.98]"
-            (click)="showRules()"
-          >
-            {{ rulesLabel() }}
-          </button>
-        </div>
-      </section>
     </app-dashboard-shell>
   `,
 })
@@ -239,9 +205,6 @@ export class GroupsPage implements OnInit {
   private readonly revealService = inject(RevealService);
   private readonly auth = inject(AuthService);
   private readonly apiError = inject(ApiErrorService);
-
-  readonly enemyLabel = signal<string>('Descubra Inimigo');
-  readonly rulesLabel = signal<string>('Ver Regras');
 
   readonly groups = signal<GroupMock[]>([]);
   readonly desktopGroups = signal<DesktopGroupCard[]>([]);
@@ -479,14 +442,5 @@ export class GroupsPage implements OnInit {
 
   goToCreate(): void {
     void this.router.navigateByUrl('/criar');
-  }
-
-  activateEnemyMode(): void {
-    this.enemyLabel.set('Modo ativado ✓');
-  }
-
-  showRules(): void {
-    this.rulesLabel.set('Sem presentes óbvios ✓');
-    setTimeout(() => this.rulesLabel.set('Ver Regras'), 2200);
   }
 }
