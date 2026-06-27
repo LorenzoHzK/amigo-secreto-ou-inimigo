@@ -2060,3 +2060,93 @@ Esse encadeamento foi implementado nos commits desta entrega.
 ---
 
 _Seção 27 adicionada durante a implementação das correções, registrando ajustes de diagnóstico descobertos no código real._
+
+---
+
+## Seção 28: Auditoria de Verificação Pós-Correções (2026-06-26)
+
+> Terceira passada de auditoria, executada após os commits de correção (`922c24d`..`9f13d7b`). Objetivo: verificar se as correções introduziram problemas e o que ainda resta. Análise sobre o código real. **Dois dos achados mais graves foram introduzidos pelas próprias correções desta sessão** e estão marcados como `[REGRESSÃO]`.
+
+### 28.1 🟠 [REGRESSÃO] `GroupsPage` dispara efeito colateral de `get_my_draw` (marca `revealed_at`)
+
+**Arquivos:** `apps/web/src/app/features/groups/groups.page.ts` (commit `922c24d`), `apps/api/supabase/migrations/004_create_rpc_get_my_draw.sql`
+
+O commit `922c24d` passou a resolver os grupos do participante chamando `revealService.getMyDraw(token)` para **cada** token salvo, no carregamento da página `/grupos`. Mas a RPC `get_my_draw` tem efeito colateral:
+
+```sql
+IF v_participant.revealed_at IS NULL THEN
+  UPDATE public.participants SET revealed_at = now() WHERE id = v_participant.id;
+END IF;
+```
+
+Ou seja: **apenas listar os grupos marca todas as participações do usuário como "reveladas"**, mesmo sem o usuário abrir a tela de revelação. `revealed_at` deveria registrar o momento real da revelação.
+
+**Impacto atual:** baixo a médio — `revealed_at` hoje não é consumido por nenhuma lógica/UI (apenas gravado). Mas é corrupção silenciosa de um campo de auditoria; qualquer feature futura que dependa dele (ex.: "quem já revelou", notificações) nasce quebrada.
+
+**Observação (pré-existente, não regressão):** `RevealPage` também chama `get_my_draw` no `resource` loader (ao carregar a página), não no clique do botão "Revelar". Portanto `revealed_at` já significava "abriu a tela", não "revelou de fato".
+
+**Correção recomendada:** separar leitura de escrita. Criar uma RPC sem efeito colateral (ex.: `get_my_participation(p_personal_token)`) que retorne participante + grupo (sem `drawn` e sem `UPDATE`), usada por `GroupsPage`; e mover a marcação de `revealed_at` para uma RPC explícita `mark_revealed(p_personal_token)` chamada no clique de "Revelar". Isso conserta a regressão **e** o comportamento impreciso pré-existente.
+
+### 28.2 🟠 [REGRESSÃO/RISCO] `Prefer: return=representation` global afeta o insert de `participants`
+
+**Arquivos:** `apps/web/src/app/core/services/supabase-rest.service.ts` (commit `9f13d7b`), `apps/api/supabase/migrations/003_create_participants_view.sql`
+
+O commit `9f13d7b` adicionou `Prefer: return=representation` ao `insertOne` **genérico**, necessário para receber o `admin_token` gerado no banco ao criar um grupo. Porém `insertOne` também é usado por `ParticipantService.addParticipant` (insert na tabela base `participants`).
+
+A migration 003 fez `REVOKE SELECT ON public.participants FROM anon, authenticated`. Em PostgreSQL, `INSERT ... RETURNING` (que é o que `return=representation` aciona no PostgREST) **exige privilégio SELECT nas colunas retornadas**. Logo, com as migrations aplicadas como escritas, o insert de participante pode passar a **falhar** (erro de permissão), quebrando o fluxo de entrada (`JoinPage` → `/revelar/:token`).
+
+**Por que pode não ter aparecido ainda:** depende de (a) as migrations 003/005 estarem de fato aplicadas no banco-alvo, e (b) do default de representação do PostgREST. Precisa de validação com banco em execução (`npm run db:reset` + teste de entrada).
+
+**Correção recomendada (frontend, sem depender de DB):** como `addParticipant` gera o `personal_token` no cliente, ele **já conhece** o objeto inserido — não precisa do retorno do servidor. Tornar o `Prefer: return=representation` opcional no `insertOne` (ligado só para `groups`) e fazer `addParticipant` retornar o objeto construído localmente. Quando o `join_group` RPC (item 27.2) for implementado, esse caminho deixa de existir.
+
+### 28.3 🟡 Código morto remanescente
+
+| Local | Item | Observação |
+|-------|------|-----------|
+| `group.service.ts` | `getGroupById`, `getGroups`, `updateGroupStatus`, `updateGroupPriceLimit`, `updateGroupDrawnAt` | Sem nenhum chamador. `getGroupById` ficou órfão após o commit `922c24d`; os demais já eram mortos. |
+| `group.service.ts` | `createGroup(payloadOrName: CreateGroupPayload \| string, ...)` | A sobrecarga de `string` não tem chamador (já notado em 22.4). |
+| `group-card.component.ts` / `group-grid.component.ts` | fallback `'/admin/demo'` e `'/revelar/demo'` em `openGroupAction` | `routeUrl` é sempre fornecido por `GroupsPage`; o fallback demo é dead code. |
+| `desktop-sidebar.component.ts` | item de menu `{ label: 'Dashboard', path: '/admin/demo' }` | Link demo **vivo**: clicar leva a `/admin/demo` → `adminTokenGuard` rejeita → redireciona para `/`. Item de navegação quebrado. Story S13 ficou incompleta aqui. |
+
+### 28.4 🟡 Inconsistências de padrão (frontend)
+
+- **`alert()` remanescente:** `admin.page.ts` (`drawNames`) ainda usa `alert(msg)` em vez de `ApiErrorService` (toast). A Story S7.3 deveria ter removido todos os `alert`. As demais ações já usam `apiError.report`.
+- **`errorInterceptor` vaza mensagens cruas:** `getFriendlyMessage` retorna `error.error.message` do PostgREST diretamente no toast (ex.: "duplicate key value violates unique constraint ..."), expondo detalhes de schema ao usuário. Recomenda-se mapear por `status` e logar o detalhe apenas no console.
+- **`environment.development.ts`** aponta para `https://YOUR_PROJECT_REF.supabase.co` (placeholder) em vez de `http://localhost:54321` que o README indica para o fluxo local — fricção de onboarding.
+- **IDs gerados no cliente:** `group.id` e `participant.id` ainda usam `crypto.randomUUID()`. Não é segredo (baixo risco), mas para consistência com a geração server-side dos tokens, poderiam migrar para `DEFAULT gen_random_uuid()`.
+
+### 28.5 🔴/🟠 Documentação dessincronizada com o código (pós-correções)
+
+A análise das docs revelou drift relevante após as correções:
+
+| Doc | Linha(s) | Problema | Severidade |
+|-----|----------|----------|-----------|
+| `docs/sdd.md` | ~297-298 | A definição da view `participants_public` **ainda inclui `personal_token`** (e omite `revealed_at`). Documenta a vulnerabilidade corrigida no commit `bff4549` como se fosse o design. | 🔴 |
+| `docs/sdd.md` | 26, 42-44 | Tokens descritos como "UUID v4 gerado no cadastro/ao entrar" via `crypto.randomUUID()` — desatualizado para `admin_token`/`invite_token` (agora server-side via `DEFAULT gen_random_uuid()`). | 🟠 |
+| `docs/prd.md` | 249 | "Identificadores: UUID v4 (Standard JS `crypto.randomUUID()`)" — idem, parcialmente desatualizado. | 🟠 |
+| `docs/sdd.md` | 55-56, 70 | Diagrama ER tipa `admin_token`/`invite_token`/`personal_token` como `uuid`. O `seed.sql` insere strings não-UUID e a RPC `get_my_draw` recebe `text` — indício forte de que as colunas são `text`. Tipo documentado diverge da realidade (ou o seed falharia em colunas `uuid`). **Requer verificação no banco.** | 🟡 |
+| `docs/sdd.md`, `apps/api/README.md` | — | Não mencionam as migrations **006** (`groups_public`) e **007** (tokens server-side), nem o header `Prefer: return=representation`, nem que `GroupsPage` consome `get_my_draw`. | 🟡 |
+
+### 28.6 Itens já documentados como evolução futura (reconfirmados, ainda abertos)
+
+Permanecem válidos da Seção 27.4, nenhum endereçado nesta sessão:
+- RPC `join_group` (tokens de participante server-side) — agora também é a solução do item 28.2.
+- Lockdown da tabela base `groups` para fechar a exposição de `admin_token` (RPC `create_group`/`get_group_by_admin_token`).
+- `GroupsPage` → `resource()` + eliminação do N+1.
+- Sorteio atômico via stored function transacional (`perform-draw`).
+
+### 28.7 Veredito e checklist priorizado
+
+As correções desta sessão resolveram corretamente os achados centrais de segurança (vazamento de `personal_token`, tipagem, tokens de grupo server-side, idempotência). Porém **duas regressões/riscos foram introduzidos** e há drift de documentação que precisa ser sanado para a doc não descrever um sistema inseguro que já foi corrigido.
+
+**Ordem recomendada de ajuste:**
+
+1. 🟠 **28.2** — Escopar o `Prefer: return=representation` (frontend, sem DB) — evita quebra potencial do fluxo de entrada.
+2. 🟠 **28.1** — RPC sem efeito colateral para listagem + `mark_revealed` explícito (precisa de migration + teste de DB).
+3. 🔴 **28.5** — Atualizar `docs/sdd.md` (view sem `personal_token`, tokens server-side, migrations 006/007) e `docs/prd.md`/`apps/api/README.md`.
+4. 🟡 **28.3 / 28.4** — Remover código morto (`GroupService`, link demo do sidebar, fallbacks demo) e trocar o `alert` por toast.
+5. 🟡 Verificar com `npm run db:reset` o tipo real das colunas de token e o fluxo completo (criar grupo → entrar → sortear → revelar) com as migrations 002/003/006/007 aplicadas.
+
+---
+
+_Seção 28 adicionada como auditoria de verificação após os commits de correção, incluindo duas regressões introduzidas pelas próprias correções e o drift de documentação resultante._
