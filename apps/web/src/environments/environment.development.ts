@@ -1,4 +1,6 @@
 export const environment = {
-  apiUrl: 'http://localhost:3001',
-  googleClientId: 'INSERIR_CLIENT_ID_AQUI',
+  production: false,
+  supabaseUrl: 'https://YOUR_PROJECT_REF.supabase.co',
+  supabaseAnonKey: 'YOUR_SUPABASE_ANON_KEY',
+  appName: 'Amigo Secreto ou Inimigo',
 };

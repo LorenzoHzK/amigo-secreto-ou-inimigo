@@ -78,10 +78,10 @@ import { MobileShellComponent } from '../../shared/components/mobile-shell/mobil
           </p>
 
           <a
-            routerLink="/criar"
+            routerLink="/login"
             class="bg-primary shadow-brand-lg hover:bg-primary-700 focus:ring-primary-300 mt-10 inline-flex min-h-14 w-full items-center justify-center rounded-full px-8 text-base font-extrabold text-white transition focus:ring-2 focus:ring-offset-2 focus:outline-none"
           >
-            Novo grupo
+            Entrar
           </a>
         </section>
       </main>
@@ -108,18 +108,24 @@ import { MobileShellComponent } from '../../shared/components/mobile-shell/mobil
           Crie trocas memoráveis com sorteios inteligentes, experiências de
           revelação e curadoria visual para qualquer celebração.
         </p>
-        <div class="mt-10 flex justify-center gap-4">
+        <div class="mt-10 flex flex-wrap justify-center gap-4">
           <a
-            routerLink="/criar"
+            routerLink="/login"
             class="bg-primary shadow-brand-lg hover:bg-primary-700 focus:ring-primary-300 rounded-full px-8 py-4 text-base font-extrabold text-white transition focus:ring-2 focus:outline-none"
           >
-            Criar grupo
+            Entrar
           </a>
           <a
-            routerLink="/revelar/alex-personal-token"
+            routerLink="/registrar"
             class="text-neutral hover:border-primary-200 hover:text-primary focus:ring-primary-300 rounded-full border border-[#ececf3] bg-white px-8 py-4 text-base font-extrabold shadow-sm transition focus:ring-2 focus:outline-none"
           >
-            Ver demonstração
+            Criar conta
+          </a>
+          <a
+            routerLink="/criar"
+            class="text-neutral hover:border-primary-200 hover:text-primary focus:ring-primary-300 rounded-full border border-[#ececf3] bg-white px-8 py-4 text-base font-extrabold shadow-sm transition focus:ring-2 focus:outline-none"
+          >
+            Criar sem conta
           </a>
         </div>
       </section>
@@ -228,12 +234,19 @@ import { MobileShellComponent } from '../../shared/components/mobile-shell/mobil
         <h2 class="mx-auto max-w-3xl text-5xl leading-tight font-black">
           Pronto para começar a sua nova tradição?
         </h2>
-        <div class="mt-9 flex justify-center gap-4">
+        <div class="mt-9 flex flex-wrap justify-center gap-4">
           <a
-            routerLink="/criar"
+            routerLink="/login"
             class="bg-primary shadow-brand hover:bg-primary-700 focus:ring-primary-300 rounded-full px-8 py-4 text-base font-extrabold text-white transition focus:ring-2 focus:outline-none"
-            >Criar Grupo Agora</a
           >
+            Entrar
+          </a>
+          <a
+            routerLink="/registrar"
+            class="text-neutral hover:bg-primary-50 rounded-full bg-white px-8 py-4 text-base font-extrabold transition focus:ring-2 focus:ring-white focus:outline-none active:scale-[0.98]"
+          >
+            Criar conta
+          </a>
           <button
             type="button"
             class="text-neutral hover:bg-primary-50 rounded-full bg-white px-8 py-4 text-base font-extrabold transition focus:ring-2 focus:ring-white focus:outline-none active:scale-[0.98]"

@@ -50,13 +50,25 @@ Com o Amigo Secreto ou Inimigo, qualquer pessoa pode criar um grupo, convidar os
 
 ### 🔐 Autenticação / Acesso
 
-**[US-01] Acessar o sistema via link**
+**[US-01a] Acesso de Participante via Link**
 
-> Como **organizador**, eu quero acessar o sistema através de um link único para que não seja necessário criar uma conta ou fazer login.
+> Como **participante**, eu quero entrar no grupo pelo link de convite sem criar conta, para que a experiência seja imediata e sem fricção.
 
-- [ ] O sistema gera um link único para o grupo
-- [ ] Qualquer pessoa com o link pode acessar sem cadastro
-- [ ] O link identifica o usuário dentro do contexto do grupo
+- [ ] Acesso à página de join via token de convite na URL.
+- [ ] Registro e entrada no grupo sem necessidade de cadastro/login.
+
+**[US-01b] Acesso de Organizador — Modo Rápido (sem conta)**
+
+> Como **organizador eventual**, eu quero criar um grupo sem cadastro, recebendo um link de administração exclusivo, para que eu possa organizar um sorteio único sem precisar de uma conta.
+
+- [ ] Organizar grupo sem criar conta é sempre possível.
+- [ ] O `admin_token` é a única credencial necessária.
+
+**[US-01c] Acesso de Organizador — Modo Persistente (com conta)**
+
+> Como **organizador recorrente**, eu quero criar uma conta para que todos os grupos que eu criar fiquem associados ao meu perfil, acessíveis de qualquer dispositivo.
+
+- [ ] Se o organizador criou conta, o grupo é automaticamente associado ao `owner_id`.
 
 ---
 
@@ -159,6 +171,27 @@ Com o Amigo Secreto ou Inimigo, qualquer pessoa pode criar um grupo, convidar os
 
 ---
 
+**[US-11] Criar conta para gestão persistente**
+
+> Como **organizador recorrente**, eu quero criar uma conta para que eu possa ver todos os grupos que organizei de qualquer dispositivo, sem depender do histórico do navegador.
+
+- [ ] Cadastro com e-mail e senha.
+- [ ] Ao criar uma conta, os tokens de grupos anteriores armazenados localmente são migrados para o `owner_id`.
+- [ ] Grupos listados a partir do banco, não do localStorage, quando autenticado.
+- [ ] Logout mantém acesso via `admin_token` nos links já compartilhados.
+
+---
+
+**[US-12] Definir data de revelação**
+
+> Como **organizador**, eu quero definir uma data a partir da qual os participantes podem revelar seu par, para que ninguém descubra antes da festa.
+
+- [ ] Campo opcional de data ao criar ou editar o grupo.
+- [ ] O botão "Revelar" fica desabilitado até a data definida.
+- [ ] A data é exibida na tela do participante com contagem regressiva.
+
+---
+
 ## 🛡️ 5. Regras de Negócio (Constraints)
 
 - O sorteio só pode ser realizado com no mínimo **3 participantes** no grupo.
@@ -168,6 +201,11 @@ Com o Amigo Secreto ou Inimigo, qualquer pessoa pode criar um grupo, convidar os
 - O link individual só exibe o par **após** o sorteio ter sido realizado.
 - O valor limite é **opcional**; se não definido, nenhuma sugestão de valor é exibida.
 - Todos os links (admin, convite e individual) são **únicos e não adivinháveis**.
+- O sorteio é **atômico**: ou todos os pares são registrados com sucesso, ou nenhum é. Falha parcial deve ser revertida.
+- O `admin_token`, `invite_token` e `personal_token` são **únicos, imutáveis e não reutilizáveis** — uma vez gerados, não mudam.
+- Um participante **não pode entrar** em um grupo onde o sorteio já foi realizado.
+- Um participante **não pode ser removido** após o sorteio.
+- O organizador **não tem acesso** ao conteúdo do `drawn_participant_id` de outros participantes — nem via interface, nem via API pública.
 
 ---
 
@@ -176,11 +214,14 @@ Com o Amigo Secreto ou Inimigo, qualquer pessoa pode criar um grupo, convidar os
 - Envio de convites por e-mail ou SMS.
 - Chat ou mensagens entre os participantes.
 - Lista de desejos (wishlist) vinculada ao participante.
-- Login social (Google, Facebook, etc.).
-- Múltiplos grupos por usuário com painel consolidado.
-- Histórico de sorteios anteriores.
+- Múltiplos grupos por usuário com painel consolidado (para usuários sem conta).
+- Histórico de sorteios anteriores (para usuários sem conta).
 - Notificações push ou por e-mail.
 - Pagamentos ou integração com e-commerce.
+- Autenticação de dois fatores.
+- Grupos privados com senha.
+- Integração com calendário (Google Calendar, iCal).
+- Login social (Google, Facebook, etc.) - Mover para v2.
 
 ---
 
@@ -205,9 +246,9 @@ Com o Amigo Secreto ou Inimigo, qualquer pessoa pode criar um grupo, convidar os
 | **Frontend**        | Angular (latest) | Framework principal, estrutura de componentes, roteamento e gerenciamento de estado. |
 | **Estilização**     | Tailwind CSS     | Utility-first CSS com suporte nativo a design responsivo e mobile-first.             |
 | **Linguagem**       | TypeScript       | Tipagem estática para maior segurança e manutenibilidade do código.                  |
-| **Identificadores** | UUID v4          | Geração de links únicos e não adivinháveis para grupos, admin e participantes.       |
-| **Hospedagem**      | A definir (MVP)  | Pode ser Vercel, Netlify ou Firebase Hosting para entrega rápida do MVP.             |
-| **Backend/DB**      | A definir (MVP)  | Firebase Firestore ou Supabase como opções para persistência sem servidor dedicado.  |
+| **Identificadores** | UUID v4 — tokens de grupo gerados no servidor (`DEFAULT gen_random_uuid()`); `crypto.randomUUID()` para `id`s | Geração de links únicos e não adivinháveis; tokens de segurança fora do controle do cliente. |
+| **Hospedagem**      | Vercel           | Plataforma moderna para entrega rápida do frontend do MVP.                           |
+| **Backend/DB**      | Supabase         | Banco de dados relacional (PostgreSQL) com RLS, PostgREST e Edge Functions sem servidor. |
 
 ---
 

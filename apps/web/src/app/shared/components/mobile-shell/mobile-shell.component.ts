@@ -1,15 +1,21 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { MobileLayoutComponent } from '../../layouts/mobile-layout/mobile-layout.component';
 
 @Component({
   selector: 'app-mobile-shell',
   standalone: true,
-  imports: [MobileLayoutComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-mobile-layout [outerClass]="outerClass()" [innerClass]="innerClass()">
-      <ng-content />
-    </app-mobile-layout>
+    <div
+      class="bg-base-200 text-neutral min-h-dvh w-full font-sans antialiased lg:hidden"
+      [class]="outerClass()"
+    >
+      <div
+        class="bg-base-200 mx-auto flex min-h-dvh w-full max-w-[430px] flex-col overflow-hidden shadow-none"
+        [class]="innerClass()"
+      >
+        <ng-content />
+      </div>
+    </div>
   `,
 })
 export class MobileShellComponent {

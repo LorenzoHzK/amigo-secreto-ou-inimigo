@@ -3,7 +3,6 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "rootDir": "./src",
     "outDir": "./dist",
     "strict": true,
     "noImplicitOverride": true,

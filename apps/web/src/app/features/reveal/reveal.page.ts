@@ -1,10 +1,12 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   input,
   signal,
+  resource,
 } from '@angular/core';
 import { CurrencyPipe, DatePipe, UpperCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -12,9 +14,10 @@ import { AppAvatarComponent } from '../../shared/components/app-avatar/app-avata
 import { BottomNavComponent } from '../../shared/components/bottom-nav/bottom-nav.component';
 import { MobileShellComponent } from '../../shared/components/mobile-shell/mobile-shell.component';
 import { DesktopLayoutComponent } from '../../shared/layouts/desktop-layout/desktop-layout.component';
-import { GroupService } from '../../core/services/group.service';
-import { ParticipantService } from '../../core/services/participant.service';
-import { Group, Participant } from '../../core/models';
+import { RevealService } from '../../core/services/reveal.service';
+import { ApiErrorService } from '../../core/services/api-error.service';
+import { InitialsPipe } from '../../shared/pipes/initials.pipe';
+import { MyDrawResult } from '../../core/models';
 
 @Component({
   selector: 'app-reveal-page',
@@ -28,6 +31,7 @@ import { Group, Participant } from '../../core/models';
     CurrencyPipe,
     DatePipe,
     UpperCasePipe,
+    InitialsPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -54,7 +58,7 @@ import { Group, Participant } from '../../core/models';
             />
           </svg>
         </button>
-        <app-avatar [initials]="getInitials(participant()?.name || 'US')" />
+        <app-avatar [initials]="(participant()?.name || 'US') | initials" />
       </header>
 
       <main class="flex-1 px-6 pb-8">
@@ -123,14 +127,21 @@ import { Group, Participant } from '../../core/models';
                 para revelar seu amigo secreto!
               }
             </p>
-            <button
-              type="button"
-              [disabled]="!group()?.drawn_at"
-              class="text-primary hover:bg-primary-50 mt-7 min-h-13 w-full rounded-full bg-white px-6 text-sm font-black shadow-[0_12px_28px_rgba(26,26,46,0.14)] transition focus:ring-2 focus:ring-white/80 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-              (click)="reveal()"
-            >
-              {{ group()?.drawn_at ? revealLabel() : 'Aguardando Sorteio' }}
-            </button>
+
+            @if (countdownLabel()) {
+              <div class="mt-7 text-center text-sm font-bold text-white/90">
+                {{ countdownLabel() }}
+              </div>
+            } @else {
+              <button
+                type="button"
+                [disabled]="!canReveal()"
+                class="text-primary hover:bg-primary-50 mt-7 min-h-13 w-full rounded-full bg-white px-6 text-sm font-black shadow-[0_12px_28px_rgba(26,26,46,0.14)] transition focus:ring-2 focus:ring-white/80 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                (click)="reveal()"
+              >
+                {{ group()?.drawn_at ? revealLabel() : 'Aguardando Sorteio' }}
+              </button>
+            }
           </section>
 
           <div class="my-7 flex items-center gap-4">
@@ -157,7 +168,7 @@ import { Group, Participant } from '../../core/models';
               <app-avatar
                 [initials]="
                   isRevealed()
-                    ? getInitials(drawnParticipant()?.name || '')
+                    ? ((drawnParticipant()?.name || '') | initials)
                     : '🔒'
                 "
                 sizeClass="size-20 text-xl"
@@ -237,38 +248,68 @@ import { Group, Participant } from '../../core/models';
           <article
             class="rounded-[2.25rem] border border-[#ececf3] bg-white p-10 shadow-[0_24px_70px_rgba(26,26,46,0.075)]"
           >
-            <span
-              class="bg-primary-50 mx-auto grid size-20 place-items-center rounded-full text-4xl"
-              aria-hidden="true"
-              >🔒</span
-            >
-            <p
-              class="text-primary mt-7 text-xs font-black tracking-[0.18em] uppercase"
-            >
-              {{ 'Olá, ' + (participant()?.name || '') | uppercase }}
-            </p>
-            <h1 class="text-neutral mt-4 text-5xl leading-tight font-black">
-              O grande momento chegou!
-            </h1>
-            <p
-              class="mx-auto mt-5 max-w-xl text-base leading-7 font-medium text-neutral-400"
-            >
-              @if (group()?.drawn_at) {
-                Sua atribuição secreta está protegida e pronta para ser revelada
-                com privacidade.
+            @if (isRevealed()) {
+              <div
+                class="bg-secondary-50 mx-auto grid size-20 place-items-center rounded-full text-4xl"
+                aria-hidden="true"
+              >
+                🎉
+              </div>
+              <div class="mx-auto mt-5 flex justify-center">
+                <app-avatar
+                  [initials]="(drawnParticipant()?.name || '') | initials"
+                  sizeClass="size-24 text-2xl"
+                  [ariaLabel]="'Avatar de ' + (drawnParticipant()?.name || '')"
+                />
+              </div>
+              <p
+                class="text-primary mt-6 text-xs font-black tracking-[0.18em] uppercase"
+              >
+                Seu amigo secreto é
+              </p>
+              <h2 class="text-neutral mt-3 text-3xl font-black">
+                {{ drawnParticipant()?.name }}
+              </h2>
+            } @else {
+              <span
+                class="bg-primary-50 mx-auto grid size-20 place-items-center rounded-full text-4xl"
+                aria-hidden="true"
+                >🔒</span
+              >
+              <p
+                class="text-primary mt-7 text-xs font-black tracking-[0.18em] uppercase"
+              >
+                {{ 'Olá, ' + (participant()?.name || '') | uppercase }}
+              </p>
+              <h1 class="text-neutral mt-4 text-5xl leading-tight font-black">
+                O grande momento chegou!
+              </h1>
+              <p
+                class="mx-auto mt-5 max-w-xl text-base leading-7 font-medium text-neutral-400"
+              >
+                @if (group()?.drawn_at) {
+                  Sua atribuição secreta está protegida e pronta para ser revelada
+                  com privacidade.
+                } @else {
+                  Aguarde o sorteio pelo organizador para poder revelar seu amigo
+                  secreto.
+                }
+              </p>
+              @if (countdownLabel()) {
+                <div class="mt-8 text-center text-base font-bold text-neutral-500">
+                  {{ countdownLabel() }}
+                </div>
               } @else {
-                Aguarde o sorteio pelo organizador para poder revelar seu amigo
-                secreto.
+                <button
+                  type="button"
+                  [disabled]="!canReveal()"
+                  class="bg-primary shadow-brand-lg hover:bg-primary-700 focus:ring-primary-300 mt-8 rounded-full px-12 py-4 text-base font-extrabold text-white transition focus:ring-2 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  (click)="reveal()"
+                >
+                  {{ group()?.drawn_at ? revealLabel() : 'Aguardando Sorteio' }}
+                </button>
               }
-            </p>
-            <button
-              type="button"
-              [disabled]="!group()?.drawn_at"
-              class="bg-primary shadow-brand-lg hover:bg-primary-700 focus:ring-primary-300 mt-8 rounded-full px-12 py-4 text-base font-extrabold text-white transition focus:ring-2 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-              (click)="reveal()"
-            >
-              {{ group()?.drawn_at ? revealLabel() : 'Aguardando Sorteio' }}
-            </button>
+            }
           </article>
 
           <div class="mt-6 grid grid-cols-3 gap-5 text-left">
@@ -325,74 +366,53 @@ import { Group, Participant } from '../../core/models';
 export class RevealPage {
   readonly personalToken = input.required<string>();
 
-  private readonly groupService = inject(GroupService);
-  private readonly participantService = inject(ParticipantService);
+  private readonly revealService = inject(RevealService);
+  private readonly apiError = inject(ApiErrorService);
 
-  readonly participant = signal<Participant | null>(null);
-  readonly group = signal<Group | null>(null);
-  readonly drawnParticipant = signal<Participant | null>(null);
+  readonly drawResource = resource<MyDrawResult | null, { token: string }>({
+    params: () => ({ token: this.personalToken() }),
+    loader: ({ params }) => this.revealService.getMyDraw(params.token),
+  });
 
-  readonly isLoading = signal<boolean>(true);
-  readonly error = signal<string | null>(null);
+  readonly drawResult = computed<MyDrawResult | null>(() => this.drawResource.value() ?? null);
+  readonly isLoading = computed<boolean>(() => this.drawResource.isLoading());
+  readonly error = computed<string | null>(() => {
+    if (this.drawResource.error()) return 'Erro ao carregar os dados. Tente novamente.';
+    if (!this.drawResource.isLoading() && !this.drawResource.value()) {
+      return 'Link de revelação inválido ou expirado.';
+    }
+    return null;
+  });
 
   readonly isRevealed = signal<boolean>(false);
   readonly revealLabel = signal<string>('Revelar Resultado');
 
-  constructor() {
-    effect(() => {
-      const token = this.personalToken();
-      if (token) {
-        void this.loadData(token);
-      }
-    });
-  }
+  // Computed signals para simplificar o template
+  readonly participant = computed(() => this.drawResult()?.participant ?? null);
+  readonly group = computed(() => this.drawResult()?.group ?? null);
+  readonly drawnParticipant = computed(() => this.drawResult()?.drawn ?? null);
 
-  async loadData(token: string): Promise<void> {
-    this.isLoading.set(true);
-    this.error.set(null);
-    try {
-      const p =
-        await this.participantService.getParticipantByPersonalToken(token);
-      if (!p) {
-        this.error.set('Link de revelação inválido.');
-        return;
-      }
-      this.participant.set(p);
+  readonly canReveal = computed(() => {
+    const g = this.group();
+    if (!g?.drawn_at) return false;
+    if (!g.reveal_date) return true;
+    return new Date() >= new Date(g.reveal_date);
+  });
 
-      const g = await this.groupService.getGroupById(p.group_id);
-      if (!g) {
-        this.error.set('Grupo não encontrado.');
-        return;
-      }
-      this.group.set(g);
-
-      if (g.drawn_at && p.drawn_participant_id) {
-        const target = await this.participantService.getParticipantById(
-          p.drawn_participant_id,
-        );
-        this.drawnParticipant.set(target);
-      }
-    } catch (err) {
-      console.error(err);
-      this.error.set('Erro ao carregar os dados.');
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
+  readonly countdownLabel = computed(() => {
+    const g = this.group();
+    if (!g?.reveal_date) return null;
+    const diff = new Date(g.reveal_date).getTime() - Date.now();
+    if (diff <= 0) return null;
+    const days = Math.ceil(diff / 86_400_000);
+    return `Revelação liberada em ${days} dia${days !== 1 ? 's' : ''}`;
+  });
 
   reveal(): void {
-    if (!this.group()?.drawn_at) {
-      alert('O sorteio ainda não foi realizado pelo organizador.');
-      return;
-    }
+    if (!this.canReveal()) return;
     this.isRevealed.set(true);
     this.revealLabel.set('Resultado revelado ✓');
-  }
-
-  getInitials(name: string): string {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 0 || !parts[0]) return '';
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    // Registra o momento real da revelação (RPC sem efeito colateral na leitura).
+    void this.revealService.markRevealed(this.personalToken());
   }
 }

@@ -1,74 +1,55 @@
-import { Injectable } from '@angular/core';
-import { Group } from '../models';
-import { environment } from '../../../environments/environment';
+import { Injectable, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { Group, CreateGroupPayload } from '../models';
+import { SupabaseRestService } from './supabase-rest.service';
 
 @Injectable({ providedIn: 'root' })
 export class GroupService {
-  private readonly baseUrl = `${environment.apiUrl}/groups`;
-
-  async getGroups(): Promise<Group[]> {
-    const response = await fetch(this.baseUrl);
-    return response.json();
-  }
-
-  async getGroupById(id: string): Promise<Group | null> {
-    try {
-      const response = await fetch(`${this.baseUrl}/${id}`);
-      if (!response.ok) return null;
-      return await response.json();
-    } catch {
-      return null;
-    }
-  }
+  private readonly supabase = inject(SupabaseRestService);
+  private readonly table = 'groups';
 
   async getGroupByAdminToken(token: string): Promise<Group | null> {
-    const response = await fetch(`${this.baseUrl}?admin_token=${token}`);
-    const groups: Group[] = await response.json();
-    return groups.length > 0 ? groups[0] : null;
+    return firstValueFrom(
+      this.supabase.selectOne<Group>(this.table, {
+        filters: { admin_token: token },
+      }),
+    );
   }
 
   async getGroupByInviteToken(token: string): Promise<Group | null> {
-    const response = await fetch(`${this.baseUrl}?invite_token=${token}`);
-    const groups: Group[] = await response.json();
-    return groups.length > 0 ? groups[0] : null;
+    return firstValueFrom(
+      this.supabase.selectOne<Group>(this.table, {
+        filters: { invite_token: token },
+      }),
+    );
   }
 
-  async createGroup(name: string, priceLimit: number | null): Promise<Group> {
-    const newGroup: Group = {
+  async getGroupsByOwnerId(ownerId: string): Promise<Group[]> {
+    return firstValueFrom(
+      this.supabase.select<Group>(this.table, {
+        filters: { owner_id: ownerId },
+        order: 'created_at',
+        ascending: false,
+      }),
+    );
+  }
+
+  async createGroup(payload: CreateGroupPayload): Promise<Group> {
+    // admin_token e invite_token são gerados pelo banco (DEFAULT gen_random_uuid())
+    // e retornam no insert via Prefer: return=representation. Nunca gerar
+    // tokens de segurança no cliente.
+    const newGroup = {
       id: crypto.randomUUID(),
-      name,
-      admin_token: crypto.randomUUID(),
-      invite_token: crypto.randomUUID(),
-      price_limit: priceLimit,
+      name: payload.name,
+      price_limit: payload.price_limit,
+      reveal_date: payload.reveal_date,
+      status: 'open' as const,
       drawn_at: null,
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      owner_id: payload.owner_id ?? null,
     };
-    const response = await fetch(this.baseUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newGroup),
-    });
-    return response.json();
-  }
 
-  async updateGroupPriceLimit(
-    id: string,
-    priceLimit: number | null,
-  ): Promise<Group> {
-    const response = await fetch(`${this.baseUrl}/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ price_limit: priceLimit }),
-    });
-    return response.json();
-  }
-
-  async updateGroupDrawnAt(id: string, drawnAt: string | null): Promise<Group> {
-    const response = await fetch(`${this.baseUrl}/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ drawn_at: drawnAt }),
-    });
-    return response.json();
+    return firstValueFrom(this.supabase.insertOne<Group>(this.table, newGroup));
   }
 }

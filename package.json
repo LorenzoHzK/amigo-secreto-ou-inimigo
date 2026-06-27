@@ -8,10 +8,16 @@
   ],
   "scripts": {
     "dev:web": "npm run start -w apps/web",
-    "start:web": "npm run start -w apps/web",
+    "dev:api": "npm run dev -w apps/api",
+    "dev": "concurrently -n \"WEB,API\" -c \"cyan,green\" \"npm run dev:web\" \"npm run dev:api\"",
     "build:web": "npm run build -w apps/web",
     "test:web": "npm run test -w apps/web",
+    "test:unit": "npm run test:unit -w apps/web",
     "lint:web": "npm run lint -w apps/web",
+    "db:push": "npm run db:push -w apps/api",
+    "db:reset": "npm run db:reset -w apps/api",
+    "functions:serve": "npm run functions:serve -w apps/api",
+    "functions:deploy": "npm run functions:deploy -w apps/api",
     "mock:api": "npm run mock:api -w apps/web",
     "format": "prettier --write ."
   },
@@ -23,6 +29,7 @@
   "author": "Matheus Lorenz e Eduardo",
   "license": "UNLICENSED",
   "devDependencies": {
+    "concurrently": "^9.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "prettier": "^3.8.3",
