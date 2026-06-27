@@ -57,11 +57,12 @@ export class GroupService {
       payload = payloadOrName;
     }
 
+    // admin_token e invite_token são gerados pelo banco (DEFAULT gen_random_uuid())
+    // e retornam no insert via Prefer: return=representation. Nunca gerar
+    // tokens de segurança no cliente.
     const newGroup = {
       id: crypto.randomUUID(),
       name: payload.name,
-      admin_token: crypto.randomUUID(),
-      invite_token: crypto.randomUUID(),
       price_limit: payload.price_limit,
       reveal_date: payload.reveal_date,
       status: 'open' as const,

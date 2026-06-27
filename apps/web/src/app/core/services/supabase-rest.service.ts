@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { SUPABASE_URL } from '../tokens/supabase.tokens';
@@ -57,9 +57,13 @@ export class SupabaseRestService {
   }
 
   insertOne<T>(table: string, payload: Record<string, unknown>): Observable<T> {
+    // Prefer: return=representation garante que o PostgREST devolva a linha
+    // inserida — necessário para receber colunas geradas pelo banco
+    // (ex.: admin_token/invite_token via DEFAULT gen_random_uuid()).
     return this.http
       .post<T[]>(`${this.baseUrl}/rest/v1/${table}`, payload, {
         params: new HttpParams().set('select', '*'),
+        headers: new HttpHeaders({ Prefer: 'return=representation' }),
       })
       .pipe(map((rows) => rows[0]));
   }
