@@ -89,11 +89,6 @@ export class GroupGridComponent {
   openGroup(group: DesktopGroupCard): void {
     if (group.actionUrl) {
       void this.router.navigateByUrl(group.actionUrl);
-      return;
     }
-    const target = group.action.toLowerCase().includes('revelar')
-      ? '/revelar/demo'
-      : '/admin/demo';
-    void this.router.navigateByUrl(target);
   }
 }

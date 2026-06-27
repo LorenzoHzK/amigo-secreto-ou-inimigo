@@ -75,7 +75,6 @@ export class DesktopSidebarComponent {
   private readonly router = inject(Router);
 
   readonly items: DesktopSidebarItem[] = [
-    { label: 'Dashboard', path: '/admin/demo', icon: '▦', active: false },
     { label: 'Meus Grupos', path: '/grupos', icon: '◉', active: true },
     { label: 'Nova Troca', path: '/criar', icon: '+', active: false },
     { label: 'Configurações', path: '/grupos', icon: '⚙', active: false },
