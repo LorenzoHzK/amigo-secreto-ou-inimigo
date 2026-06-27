@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 interface DesktopSidebarItem {
   label: string;
@@ -52,35 +52,12 @@ interface DesktopSidebarItem {
           </a>
         }
       </nav>
-
-      <div
-        class="bg-neutral absolute inset-x-6 bottom-7 rounded-[1.75rem] p-5 text-white shadow-[0_18px_40px_rgba(26,26,46,0.18)]"
-      >
-        <p class="text-sm font-black">Modo Inimigo</p>
-        <p class="mt-2 text-xs leading-5 text-white/65">
-          Ative desafios criativos para uma troca memorável.
-        </p>
-        <button
-          type="button"
-          class="text-neutral mt-4 rounded-full bg-white px-4 py-2 text-xs font-black transition active:scale-[0.98]"
-          (click)="exploreEnemyMode()"
-        >
-          Explorar
-        </button>
-      </div>
     </aside>
   `,
 })
 export class DesktopSidebarComponent {
-  private readonly router = inject(Router);
-
   readonly items: DesktopSidebarItem[] = [
     { label: 'Meus Grupos', path: '/grupos', icon: '◉', active: true },
-    { label: 'Nova Troca', path: '/criar', icon: '+', active: false },
-    { label: 'Configurações', path: '/grupos', icon: '⚙', active: false },
+    { label: 'Novo Grupo', path: '/criar', icon: '+', active: false },
   ];
-
-  exploreEnemyMode(): void {
-    void this.router.navigateByUrl('/criar');
-  }
 }
