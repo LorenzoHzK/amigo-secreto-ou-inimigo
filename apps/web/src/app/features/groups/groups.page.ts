@@ -2,13 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
-  computed,
   inject,
   signal,
 } from '@angular/core';
 import { UpperCasePipe } from '@angular/common';
 import { Router } from '@angular/router';
-import { AppAvatarComponent } from '../../shared/components/app-avatar/app-avatar.component';
+import { UserMenuComponent } from '../../shared/components/user-menu/user-menu.component';
 import { BottomNavComponent } from '../../shared/components/bottom-nav/bottom-nav.component';
 import {
   GroupCardAvatar,
@@ -48,7 +47,7 @@ interface GroupMock {
   selector: 'app-groups-page',
   standalone: true,
   imports: [
-    AppAvatarComponent,
+    UserMenuComponent,
     BottomNavComponent,
     GroupCardComponent,
     InfoBadgeComponent,
@@ -76,7 +75,7 @@ interface GroupMock {
             >
           </p>
         </div>
-        <app-avatar [initials]="userInitials()" />
+        <app-user-menu />
       </header>
 
       <main class="flex-1 space-y-5 px-6 pb-8">
@@ -209,13 +208,6 @@ export class GroupsPage implements OnInit {
   readonly groups = signal<GroupMock[]>([]);
   readonly desktopGroups = signal<DesktopGroupCard[]>([]);
   readonly isLoading = signal<boolean>(true);
-
-  readonly userInitials = computed(() => {
-    const user = this.auth.user();
-    if (!user || !user.email) return 'LS';
-    const emailParts = user.email.split('@')[0];
-    return emailParts.substring(0, 2).toUpperCase();
-  });
 
   ngOnInit(): void {
     void this.loadGroups();

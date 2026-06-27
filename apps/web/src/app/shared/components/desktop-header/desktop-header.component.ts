@@ -1,13 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { inject } from '@angular/core';
-import { AppAvatarComponent } from '../app-avatar/app-avatar.component';
+import { UserMenuComponent } from '../user-menu/user-menu.component';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-desktop-header',
   standalone: true,
-  imports: [RouterLink, AppAvatarComponent],
+  imports: [RouterLink, UserMenuComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header
@@ -48,7 +48,7 @@ import { AuthService } from '../../../core/services/auth.service';
               Entrar
             </a>
           }
-          <app-avatar [initials]="userInitials()" sizeClass="size-10 text-xs" />
+          <app-user-menu />
         </div>
       </div>
     </header>
@@ -56,11 +56,4 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class DesktopHeaderComponent {
   readonly auth = inject(AuthService);
-
-  readonly userInitials = computed(() => {
-    const user = this.auth.user();
-    if (!user || !user.email) return 'LS';
-    const emailParts = user.email.split('@')[0];
-    return emailParts.substring(0, 2).toUpperCase();
-  });
 }

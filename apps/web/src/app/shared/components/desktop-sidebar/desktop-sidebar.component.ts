@@ -1,5 +1,12 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+} from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { AppAvatarComponent } from '../app-avatar/app-avatar.component';
+import { AuthService } from '../../../core/services/auth.service';
 
 interface DesktopSidebarItem {
   label: string;
@@ -11,7 +18,7 @@ interface DesktopSidebarItem {
 @Component({
   selector: 'app-desktop-sidebar',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, AppAvatarComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <aside
@@ -52,12 +59,55 @@ interface DesktopSidebarItem {
           </a>
         }
       </nav>
+
+      @if (auth.isAuthenticated()) {
+        <div
+          class="absolute inset-x-6 bottom-7 flex items-center gap-3 rounded-2xl border border-[#ececf3] bg-[#f8f8fb] p-3"
+        >
+          <app-avatar [initials]="initials()" sizeClass="size-9 text-[11px]" />
+          <div class="min-w-0 flex-1">
+            <p class="text-neutral truncate text-xs font-bold">{{ email() }}</p>
+            <button
+              type="button"
+              class="text-error text-xs font-extrabold hover:underline focus:outline-none"
+              (click)="logout()"
+            >
+              Sair
+            </button>
+          </div>
+        </div>
+      }
     </aside>
   `,
 })
 export class DesktopSidebarComponent {
+  readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
   readonly items: DesktopSidebarItem[] = [
     { label: 'Meus Grupos', path: '/grupos', icon: '◉', active: true },
     { label: 'Novo Grupo', path: '/criar', icon: '+', active: false },
   ];
+
+  readonly email = computed(() => this.auth.user()?.email ?? '');
+
+  readonly initials = computed(() => {
+    const user = this.auth.user();
+    const source =
+      (user?.user_metadata?.['display_name'] as string | undefined) ??
+      user?.email ??
+      '';
+    const trimmed = source.trim();
+    if (!trimmed) return 'EU';
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return trimmed.substring(0, 2).toUpperCase();
+  });
+
+  async logout(): Promise<void> {
+    await this.auth.signOut();
+    void this.router.navigateByUrl('/');
+  }
 }
