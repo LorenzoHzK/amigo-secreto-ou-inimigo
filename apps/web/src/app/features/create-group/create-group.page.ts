@@ -50,14 +50,11 @@ import { AuthService } from '../../core/services/auth.service';
               <input
                 type="text"
                 formControlName="priceLimit"
-                inputmode="decimal"
+                inputmode="numeric"
+                (input)="onPriceInput($event)"
                 class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
-                placeholder="0,00"
-              />
-              @if (form.controls.priceLimit.touched && form.controls.priceLimit.invalid) {
-                <p class="mt-2 text-xs font-bold text-error">Use apenas números e decimal opcional, como 50 ou 50,00.</p>
-              }
-            </label>
+                placeholder="R$ 0,00"
+              />            </label>
 
             <label class="block">
               <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">
@@ -117,14 +114,11 @@ import { AuthService } from '../../core/services/auth.service';
               <input
                 type="text"
                 formControlName="priceLimit"
-                inputmode="decimal"
+                inputmode="numeric"
+                (input)="onPriceInput($event)"
                 class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
-                placeholder="0,00"
-              />
-              @if (form.controls.priceLimit.touched && form.controls.priceLimit.invalid) {
-                <p class="mt-2 text-xs font-bold text-error">Use apenas números e decimal opcional, como 50 ou 50,00.</p>
-              }
-            </label>
+                placeholder="R$ 0,00"
+              />            </label>
 
             <label class="block md:col-span-2">
               <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">
@@ -161,16 +155,41 @@ export class CreateGroupPage {
 
   readonly isSubmitting = signal(false);
   readonly buttonLabel = signal('Criar grupo 🎉');
-  readonly today = signal(new Date().toISOString().split('T')[0]);
+  readonly today = signal(this.localToday());
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(3)]],
-    priceLimit: ['', [Validators.pattern(/^\d+(?:[.,]\d{1,2})?$/)]],
+    priceLimit: [''],
     revealDate: [''],
   });
 
   goBack(): void {
     this.location.back();
+  }
+
+  // Máscara estilo banco: digita-se da direita para a esquerda em centavos
+  // e o valor é exibido formatado em BRL (ex.: 5 -> R$ 0,05, 12345 -> R$ 123,45).
+  onPriceInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const digits = input.value.replace(/\D/g, '').slice(0, 11);
+    const formatted = digits ? this.formatBRL(Number(digits)) : '';
+    this.form.controls.priceLimit.setValue(formatted, { emitEvent: false });
+  }
+
+  private formatBRL(cents: number): string {
+    return (cents / 100).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+  }
+
+  // Data de hoje no fuso LOCAL (evita o off-by-one do toISOString em UTC).
+  private localToday(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   async createGroup(): Promise<void> {
@@ -180,12 +199,16 @@ export class CreateGroupPage {
     }
 
     const name = this.form.controls.name.value.trim();
-    const rawPrice = this.form.controls.priceLimit.value.trim();
-    const parsedPrice = rawPrice ? Number.parseFloat(rawPrice.replace(',', '.')) : null;
-    const price = parsedPrice !== null && Number.isFinite(parsedPrice) ? parsedPrice : null;
 
+    // Input mascarado em centavos (ex.: "R$ 1.234,56") → número em reais.
+    const priceDigits = this.form.controls.priceLimit.value.replace(/\D/g, '');
+    const price = priceDigits ? Number(priceDigits) / 100 : null;
+
+    // Interpreta a data como meia-noite LOCAL para não deslocar o dia exibido.
     const revealDateRaw = this.form.controls.revealDate.value;
-    const revealDate = revealDateRaw ? new Date(revealDateRaw).toISOString() : null;
+    const revealDate = revealDateRaw
+      ? new Date(`${revealDateRaw}T00:00:00`).toISOString()
+      : null;
 
     const userId = this.auth.user()?.id ?? null;
 
