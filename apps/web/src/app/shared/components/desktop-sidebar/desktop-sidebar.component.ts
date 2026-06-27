@@ -25,9 +25,9 @@ interface DesktopSidebarItem {
       class="fixed top-0 left-0 hidden h-dvh w-[292px] border-r border-[#ececf3] bg-white px-6 py-7 shadow-[14px_0_45px_rgba(26,26,46,0.035)] lg:block"
     >
       <a
-        routerLink="/"
+        [routerLink]="auth.isAuthenticated() ? '/grupos' : '/'"
         class="focus:ring-primary-300 flex items-center gap-3 rounded-full focus:ring-2 focus:outline-none"
-        aria-label="Ir para home"
+        [attr.aria-label]="auth.isAuthenticated() ? 'Ir para meus grupos' : 'Ir para home'"
       >
         <span
           class="bg-primary shadow-brand grid size-11 place-items-center rounded-full text-xl text-white"

@@ -17,9 +17,9 @@ import { AuthService } from '../../../core/services/auth.service';
         class="mx-auto flex h-full max-w-7xl items-center justify-between px-10"
       >
         <a
-          routerLink="/"
+          [routerLink]="auth.isAuthenticated() ? '/grupos' : '/'"
           class="focus:ring-primary-300 flex items-center gap-3 rounded-full focus:ring-2 focus:outline-none"
-          aria-label="Ir para home"
+          [attr.aria-label]="auth.isAuthenticated() ? 'Ir para meus grupos' : 'Ir para home'"
         >
           <span
             class="bg-primary shadow-brand grid size-10 place-items-center rounded-full text-xl text-white"
