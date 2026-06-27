@@ -32,25 +32,6 @@ import { AuthService } from '../../../core/services/auth.service';
           >
         </a>
 
-        <nav
-          class="rounded-full border border-[#ececf3] bg-[#f8f8fb] px-2 py-2 text-sm font-extrabold text-neutral-500"
-          aria-label="Navegação desktop"
-        >
-          <div class="flex items-center gap-1">
-            <a
-              routerLink="/grupos"
-              class="hover:text-primary focus:ring-primary-300 rounded-full px-5 py-2.5 transition hover:bg-white focus:ring-2 focus:outline-none"
-              >Grupos</a
-            >
-            <a
-              routerLink="/"
-              fragment="como-funciona"
-              class="hover:text-primary focus:ring-primary-300 rounded-full px-5 py-2.5 transition hover:bg-white focus:ring-2 focus:outline-none"
-              >Como Funciona</a
-            >
-          </div>
-        </nav>
-
         <div class="flex items-center gap-3">
           @if (auth.isAuthenticated()) {
             <a
