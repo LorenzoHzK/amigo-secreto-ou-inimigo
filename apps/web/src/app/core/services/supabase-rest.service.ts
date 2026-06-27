@@ -60,12 +60,24 @@ export class SupabaseRestService {
     // Prefer: return=representation garante que o PostgREST devolva a linha
     // inserida — necessário para receber colunas geradas pelo banco
     // (ex.: admin_token/invite_token via DEFAULT gen_random_uuid()).
+    // ATENÇÃO: RETURNING exige privilégio SELECT na tabela. Use apenas em
+    // tabelas com SELECT concedido ao role (ex.: groups). Para tabelas com
+    // SELECT revogado (ex.: participants), use insert() (return=minimal).
     return this.http
       .post<T[]>(`${this.baseUrl}/rest/v1/${table}`, payload, {
         params: new HttpParams().set('select', '*'),
         headers: new HttpHeaders({ Prefer: 'return=representation' }),
       })
       .pipe(map((rows) => rows[0]));
+  }
+
+  // Insert sem retorno da linha (Prefer: return=minimal). Não dispara
+  // RETURNING, portanto funciona mesmo quando o SELECT da tabela foi
+  // revogado para o role (caso de participants).
+  insert(table: string, payload: Record<string, unknown>): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/rest/v1/${table}`, payload, {
+      headers: new HttpHeaders({ Prefer: 'return=minimal' }),
+    });
   }
 
   updateOne<T>(

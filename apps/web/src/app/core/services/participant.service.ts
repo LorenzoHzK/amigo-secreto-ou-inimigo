@@ -21,7 +21,9 @@ export class ParticipantService {
     );
   }
 
-  // INSERT ainda usa a tabela real
+  // INSERT na tabela real com return=minimal: participants tem SELECT
+  // revogado para anon/authenticated, então RETURNING falharia. Como o
+  // personal_token é construído aqui, retornamos o objeto local.
   async addParticipant(groupId: string, name: string): Promise<Participant> {
     const newParticipant = {
       id: crypto.randomUUID(),
@@ -34,9 +36,8 @@ export class ParticipantService {
       owner_id: null,
     };
 
-    return firstValueFrom(
-      this.supabase.insertOne<Participant>(this.table, newParticipant),
-    );
+    await firstValueFrom(this.supabase.insert(this.table, newParticipant));
+    return newParticipant;
   }
 
   async removeParticipant(participantId: string): Promise<void> {
