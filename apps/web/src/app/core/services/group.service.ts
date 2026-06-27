@@ -1,29 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { Group, CreateGroupPayload, GroupStatus } from '../models';
+import { Group, CreateGroupPayload } from '../models';
 import { SupabaseRestService } from './supabase-rest.service';
 
 @Injectable({ providedIn: 'root' })
 export class GroupService {
   private readonly supabase = inject(SupabaseRestService);
   private readonly table = 'groups';
-
-  async getGroups(): Promise<Group[]> {
-    return firstValueFrom(
-      this.supabase.select<Group>(this.table, {
-        order: 'created_at',
-        ascending: false,
-      }),
-    );
-  }
-
-  async getGroupById(id: string): Promise<Group | null> {
-    return firstValueFrom(
-      this.supabase.selectOne<Group>(this.table, {
-        filters: { id },
-      }),
-    );
-  }
 
   async getGroupByAdminToken(token: string): Promise<Group | null> {
     return firstValueFrom(
@@ -41,22 +24,17 @@ export class GroupService {
     );
   }
 
-  async createGroup(
-    payloadOrName: CreateGroupPayload | string,
-    priceLimit?: number | null,
-  ): Promise<Group> {
-    let payload: CreateGroupPayload;
-    if (typeof payloadOrName === 'string') {
-      payload = {
-        name: payloadOrName,
-        price_limit: priceLimit ?? null,
-        reveal_date: null,
-        owner_id: null,
-      };
-    } else {
-      payload = payloadOrName;
-    }
+  async getGroupsByOwnerId(ownerId: string): Promise<Group[]> {
+    return firstValueFrom(
+      this.supabase.select<Group>(this.table, {
+        filters: { owner_id: ownerId },
+        order: 'created_at',
+        ascending: false,
+      }),
+    );
+  }
 
+  async createGroup(payload: CreateGroupPayload): Promise<Group> {
     // admin_token e invite_token são gerados pelo banco (DEFAULT gen_random_uuid())
     // e retornam no insert via Prefer: return=representation. Nunca gerar
     // tokens de segurança no cliente.
@@ -73,40 +51,5 @@ export class GroupService {
     };
 
     return firstValueFrom(this.supabase.insertOne<Group>(this.table, newGroup));
-  }
-
-  async getGroupsByOwnerId(ownerId: string): Promise<Group[]> {
-    return firstValueFrom(
-      this.supabase.select<Group>(this.table, {
-        filters: { owner_id: ownerId },
-        order: 'created_at',
-        ascending: false,
-      }),
-    );
-  }
-
-  async updateGroupStatus(id: string, status: GroupStatus): Promise<Group> {
-    return firstValueFrom(
-      this.supabase.updateOne<Group>(this.table, { id }, { status }),
-    );
-  }
-
-  async updateGroupPriceLimit(
-    id: string,
-    priceLimit: number | null,
-  ): Promise<Group> {
-    return firstValueFrom(
-      this.supabase.updateOne<Group>(
-        this.table,
-        { id },
-        { price_limit: priceLimit },
-      ),
-    );
-  }
-
-  async updateGroupDrawnAt(id: string, drawnAt: string | null): Promise<Group> {
-    return firstValueFrom(
-      this.supabase.updateOne<Group>(this.table, { id }, { drawn_at: drawnAt }),
-    );
   }
 }
