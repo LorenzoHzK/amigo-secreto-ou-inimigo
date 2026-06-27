@@ -23,7 +23,7 @@
 - **Estilização & UI:** Tailwind CSS v4 (CSS-First), DaisyUI v5.
 - **Roteamento:** Angular Router com Functional Guards.
 - **Formulários:** Angular Reactive Forms.
-- **Utilitários:** API Web nativa `crypto.randomUUID()` para geração de tokens UUID v4.
+- **Utilitários:** Tokens de grupo (`admin_token`/`invite_token`) são gerados no servidor via `DEFAULT gen_random_uuid()` (migration 007). `crypto.randomUUID()` é usado apenas para `id`s e, temporariamente, para `personal_token` (migração para RPC `join_group` planejada).
 - **Testes & Qualidade:** Vitest + jsdom + `@analogjs/vitest-angular` para testes unitários, ESLint (Flat Config) e Prettier.
 
 ---
@@ -39,9 +39,9 @@
 | **Participante** | `participant` | `id`, `group_id`, `name`, `personal_token`, `drawn_participant_id`, `revealed_at` |
 | **Sorteio** | Campo `drawn_at` / `status` | Registro distribuído nas entidades (atualizado atomicamente via Edge Function) |
 | **Par** | `participant.drawn_participant_id` | FK de linkagem para outro participante do grupo |
-| **Link de Convite** | `group.invite_token` | Token UUID v4 gerado no cadastro |
-| **Link Individual** | `participant.personal_token` | Token UUID v4 gerado ao entrar no grupo |
-| **Link de Admin** | `group.admin_token` | Token UUID v4 gerado para gerenciamento sem conta |
+| **Link de Convite** | `group.invite_token` | Token gerado no servidor (`DEFAULT gen_random_uuid()`) ao criar o grupo |
+| **Link Individual** | `participant.personal_token` | Token gerado ao entrar no grupo (atualmente no cliente; migração para RPC `join_group` planejada) |
+| **Link de Admin** | `group.admin_token` | Token gerado no servidor (`DEFAULT gen_random_uuid()`) ao criar o grupo |
 
 ---
 
@@ -52,8 +52,8 @@ erDiagram
     groups {
         uuid id PK
         text name
-        uuid admin_token
-        uuid invite_token
+        text admin_token "valor UUID v4, DEFAULT gen_random_uuid()"
+        text invite_token "valor UUID v4, DEFAULT gen_random_uuid()"
         numeric price_limit "nullable"
         timestamptz reveal_date "nullable"
         text status "open, drawn, archived"
@@ -67,7 +67,7 @@ erDiagram
         uuid id PK
         uuid group_id FK
         text name
-        uuid personal_token
+        text personal_token "valor UUID v4"
         uuid drawn_participant_id FK "nullable"
         timestamptz revealed_at "nullable"
         timestamptz created_at
@@ -293,18 +293,39 @@ CREATE POLICY "participants: delete by group owner" ON public.participants FOR D
     )
   );
 
--- VIEW PÚBLICA DE PARTICIPANTES (OCULTA TOTALMENTE drawn_participant_id DO SELECT COMUM)
+-- VIEW PÚBLICA DE PARTICIPANTES
+-- A view roda com privilégios do dono (NÃO é security_invoker) e portanto
+-- ignora RLS: é o canal público de leitura e NÃO pode conter colunas
+-- sensíveis. Exclui drawn_participant_id E personal_token. (migration 003)
 CREATE OR REPLACE VIEW public.participants_public AS
-  SELECT id, group_id, name, personal_token, created_at, owner_id
+  SELECT id, group_id, name, revealed_at, created_at, owner_id
   FROM public.participants;
 
 GRANT SELECT ON public.participants_public TO anon, authenticated;
 REVOKE SELECT ON public.participants FROM anon, authenticated;
 
--- RPC SEGURO PARA BUSCAR O PAR DO PARTICIPANTE (SECURITY DEFINER BYPASSA RLS CONTROLADAMENTE)
+-- Como SELECT de participants é revogado, o INSERT de participante usa
+-- Prefer: return=minimal (sem RETURNING); o cliente reusa o objeto que
+-- construiu localmente.
+
+-- VIEW PÚBLICA DE GRUPOS (exclui admin_token) — migration 006
+CREATE OR REPLACE VIEW public.groups_public AS
+  SELECT id, name, invite_token, price_limit, reveal_date, status, drawn_at, created_at, updated_at, owner_id
+  FROM public.groups;
+GRANT SELECT ON public.groups_public TO anon, authenticated;
+
+-- TOKENS DE GRUPO GERADOS NO SERVIDOR — migration 007
+ALTER TABLE public.groups
+  ALTER COLUMN admin_token  SET DEFAULT gen_random_uuid(),
+  ALTER COLUMN invite_token SET DEFAULT gen_random_uuid();
+
+-- RPC SEGURA PARA BUSCAR O PAR DO PARTICIPANTE (SECURITY DEFINER)
+-- IMPORTANTE: é apenas LEITURA (não marca revealed_at). A marcação é feita
+-- pela RPC mark_revealed (migration 008), chamada no clique de "Revelar".
 CREATE OR REPLACE FUNCTION public.get_my_draw(p_personal_token text)
 RETURNS json
 LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_participant participants%ROWTYPE;
@@ -324,11 +345,6 @@ BEGIN
     );
   END IF;
 
-  -- Registra data de revelação se for a primeira vez
-  IF v_participant.revealed_at IS NULL THEN
-    UPDATE participants SET revealed_at = now() WHERE id = v_participant.id;
-  END IF;
-
   SELECT * INTO v_drawn FROM participants WHERE id = v_participant.drawn_participant_id;
 
   RETURN json_build_object(
@@ -338,6 +354,9 @@ BEGIN
   );
 END;
 $$;
+
+-- RPC DE LEITURA PURA (lista/contextualiza participação, sem o par) — migration 008
+-- e RPC mark_revealed(p_personal_token) que registra revealed_at no clique.
 ```
 
 ---

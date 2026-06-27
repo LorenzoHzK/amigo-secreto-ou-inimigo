@@ -246,7 +246,7 @@ Com o Amigo Secreto ou Inimigo, qualquer pessoa pode criar um grupo, convidar os
 | **Frontend**        | Angular (latest) | Framework principal, estrutura de componentes, roteamento e gerenciamento de estado. |
 | **Estilização**     | Tailwind CSS     | Utility-first CSS com suporte nativo a design responsivo e mobile-first.             |
 | **Linguagem**       | TypeScript       | Tipagem estática para maior segurança e manutenibilidade do código.                  |
-| **Identificadores** | UUID v4 (Standard JS `crypto.randomUUID()`) | Geração de links únicos e não adivinháveis sem dependências extras.   |
+| **Identificadores** | UUID v4 — tokens de grupo gerados no servidor (`DEFAULT gen_random_uuid()`); `crypto.randomUUID()` para `id`s | Geração de links únicos e não adivinháveis; tokens de segurança fora do controle do cliente. |
 | **Hospedagem**      | Vercel           | Plataforma moderna para entrega rápida do frontend do MVP.                           |
 | **Backend/DB**      | Supabase         | Banco de dados relacional (PostgreSQL) com RLS, PostgREST e Edge Functions sem servidor. |
 

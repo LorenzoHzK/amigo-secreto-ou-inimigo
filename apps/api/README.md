@@ -136,10 +136,13 @@ curl -i --location --request POST 'https://SEU_PROJECT_REF.supabase.co/functions
 | Arquivo | Descrição |
 |---------|-----------|
 | `001_add_indexes.sql` | Índices de performance nos tokens |
-| `002_add_columns.sql` | Colunas `status`, `reveal_date`, `updated_at`, `revealed_at` |
-| `003_create_participants_view.sql` | View `participants_public` (sem `drawn_participant_id`) |
-| `004_create_rpc_get_my_draw.sql` | RPC para revelação segura do par sorteado |
+| `002_add_columns.sql` | Colunas `status`, `reveal_date`, `updated_at`, `revealed_at` (trigger idempotente) |
+| `003_create_participants_view.sql` | View `participants_public` (sem `drawn_participant_id` nem `personal_token`) |
+| `004_create_rpc_get_my_draw.sql` | RPC de leitura do par sorteado (sem efeito colateral) |
 | `005_apply_rls.sql` | Políticas de Row Level Security |
+| `006_create_groups_public_view.sql` | View `groups_public` (sem `admin_token`) |
+| `007_server_side_group_tokens.sql` | `DEFAULT gen_random_uuid()` em `admin_token`/`invite_token` |
+| `008_split_reveal_rpcs.sql` | RPCs `get_my_participation` (leitura) e `mark_revealed` (escrita) |
 
 ## Edge Functions
 
