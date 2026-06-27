@@ -498,7 +498,7 @@ export class AdminPage {
       console.error(err);
       const msg =
         err instanceof Error ? err.message : 'Erro ao realizar o sorteio.';
-      alert(msg);
+      this.apiError.report(msg);
       this.drawLabel.set('🎉 Sortear Nomes');
     }
   }
