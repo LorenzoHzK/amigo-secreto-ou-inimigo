@@ -36,7 +36,7 @@ import { ParticipantService } from '../../core/services/participant.service';
             <p class="text-primary text-xs font-black tracking-[0.2em] uppercase">Você foi convidado</p>
             <h1 class="text-neutral mt-4 text-4xl leading-tight font-black">{{ group()?.name }}</h1>
             <p class="mt-4 text-sm leading-6 font-medium text-neutral-400">
-              Entre com seu nome para participar da troca. O Supabase grava os participantes e o link privado.
+              Entre com seu nome para participar do grupo. O Supabase grava os participantes e o link privado.
             </p>
             <div class="mt-6 rounded-[1.5rem] bg-primary-50 p-4 text-sm font-bold text-primary-700">
               {{ priceLimitLabel() }}

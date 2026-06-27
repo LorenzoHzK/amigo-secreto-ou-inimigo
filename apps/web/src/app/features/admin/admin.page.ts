@@ -123,7 +123,7 @@ import { Group, ParticipantPublicView } from '../../core/models';
               Convidar Participantes
             </h2>
             <p class="mt-2 text-sm leading-6 font-medium text-neutral-400">
-              Compartilhe o convite seguro com quem fará parte da troca.
+              Compartilhe o convite seguro com quem fará parte do grupo.
             </p>
             <label class="mt-5 block">
               <span class="sr-only">Link de convite</span>
@@ -255,7 +255,7 @@ import { Group, ParticipantPublicView } from '../../core/models';
                 Convidar Participantes
               </h2>
               <p class="mt-3 text-sm leading-6 font-medium text-neutral-400">
-                Copie o link seguro e envie para quem fará parte da troca.
+                Copie o link seguro e envie para quem fará parte do grupo.
               </p>
               <div class="mt-6 flex gap-3">
                 <input

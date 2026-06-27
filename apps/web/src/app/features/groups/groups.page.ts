@@ -81,7 +81,7 @@ interface GroupMock {
 
       <main class="flex-1 space-y-5 px-6 pb-8">
         <section>
-          <app-info-badge label="Gerencie suas trocas" />
+          <app-info-badge label="Gerencie seus grupos" />
           <h1 class="text-neutral mt-5 text-[2.85rem] leading-none font-black">
             Meus Grupos
           </h1>
@@ -142,7 +142,7 @@ interface GroupMock {
         <div>
           <span
             class="border-primary-100 bg-primary-50 text-primary inline-flex rounded-full border px-4 py-2 text-xs font-black tracking-[0.16em] uppercase"
-            >{{ 'Gerencie suas trocas' | uppercase }}</span
+            >{{ 'Gerencie seus grupos' | uppercase }}</span
           >
           <h1 class="text-neutral mt-5 text-5xl font-black">Meus Grupos</h1>
           <p class="mt-3 text-base font-medium text-neutral-400">
