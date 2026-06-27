@@ -433,6 +433,6 @@ export class GroupsPage implements OnInit {
   }
 
   goToCreate(): void {
-    void this.router.navigateByUrl('/criar');
+    void this.router.navigateByUrl('/grupos/criar');
   }
 }

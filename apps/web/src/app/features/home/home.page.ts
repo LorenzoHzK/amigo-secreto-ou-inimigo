@@ -122,7 +122,7 @@ import { MobileShellComponent } from '../../shared/components/mobile-shell/mobil
             Criar conta
           </a>
           <a
-            routerLink="/criar"
+            routerLink="/grupos/criar"
             class="text-neutral hover:border-primary-200 hover:text-primary focus:ring-primary-300 rounded-full border border-[#ececf3] bg-white px-8 py-4 text-base font-extrabold shadow-sm transition focus:ring-2 focus:outline-none"
           >
             Criar sem conta

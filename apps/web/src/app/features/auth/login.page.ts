@@ -68,7 +68,7 @@ import { AuthService } from '../../core/services/auth.service';
             Só quer criar um sorteio rápido?
           </p>
           <a
-            routerLink="/criar"
+            routerLink="/grupos/criar"
             class="mt-3 block w-full rounded-full border border-neutral-200 bg-white py-3 text-center text-sm font-extrabold text-neutral transition hover:border-primary-200 hover:text-primary"
           >
             Criar grupo sem conta →

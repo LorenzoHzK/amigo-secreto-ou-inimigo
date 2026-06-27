@@ -86,7 +86,7 @@ export class DesktopSidebarComponent {
 
   readonly items: DesktopSidebarItem[] = [
     { label: 'Meus Grupos', path: '/grupos', icon: '◉', active: true },
-    { label: 'Novo Grupo', path: '/criar', icon: '+', active: false },
+    { label: 'Novo Grupo', path: '/grupos/criar', icon: '+', active: false },
   ];
 
   readonly email = computed(() => this.auth.user()?.email ?? '');
