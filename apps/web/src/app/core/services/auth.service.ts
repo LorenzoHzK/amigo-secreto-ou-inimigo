@@ -29,11 +29,6 @@ export interface SupabaseSession {
   user: SupabaseUser;
 }
 
-interface SignUpResponse {
-  user: SupabaseUser | null;
-  session: SupabaseSession | null;
-}
-
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -101,9 +96,11 @@ export class AuthService {
     email: string,
     password: string,
     displayName?: string,
-  ): Promise<SignUpResponse> {
+  ): Promise<SupabaseSession | null> {
+    // Sem confirmação de email, o GoTrue retorna a sessão no nível raiz
+    // (access_token, refresh_token, user...), igual ao endpoint de login.
     const response = await firstValueFrom(
-      this.http.post<SignUpResponse>(
+      this.http.post<SupabaseSession>(
         this.authUrl('signup'),
         {
           email,
@@ -116,11 +113,18 @@ export class AuthService {
       ),
     );
 
-    if (response.session) {
-      this.setSession(response.session);
+    if (response?.access_token) {
+      this.setSession(response);
+      return response;
     }
 
-    return response;
+    // Defensivo: se o signup não devolveu sessão (ex.: payload inesperado),
+    // autentica imediatamente com as mesmas credenciais.
+    try {
+      return await this.signIn(email, password);
+    } catch {
+      return null;
+    }
   }
 
   async signOut(): Promise<void> {

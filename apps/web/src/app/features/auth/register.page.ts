@@ -127,18 +127,18 @@ export class RegisterPage {
     this.buttonLabel.set('Criando...');
 
     try {
-      const response = await this.auth.signUp(
+      const session = await this.auth.signUp(
         this.form.controls.email.value.trim(),
         this.form.controls.password.value,
         this.form.controls.displayName.value.trim(),
       );
 
-      if (response.session) {
+      if (session) {
         await this.router.navigateByUrl('/grupos');
         return;
       }
 
-      this.buttonLabel.set('Confira seu email');
+      this.buttonLabel.set('Tente novamente');
     } catch {
       this.buttonLabel.set('Tente novamente');
     } finally {
