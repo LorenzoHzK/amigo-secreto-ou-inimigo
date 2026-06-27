@@ -81,11 +81,13 @@ npm run dev:api
 Aguardar até aparecer `Started supabase local development setup.` O CLI exibirá as URLs e chaves locais:
 
 ```
-API URL: http://localhost:54321
-Studio URL: http://localhost:54323
-anon key: eyJ...
-service_role key: eyJ...
+Project URL: http://127.0.0.1:54321
+Studio:      http://127.0.0.1:54323
+Publishable: sb_publishable_...   ← usar no frontend
+Secret:      sb_secret_...        ← server-side, nunca no frontend
 ```
+
+> CLI recente usa o **novo formato de chaves**: `Publishable` substitui a antiga `anon key` e `Secret` substitui a `service_role key`. Se a sua versão ainda exibir `anon key`/`service_role key` (JWT `eyJ...`), use a `anon key`.
 
 **Passo 2:** Configurar o frontend com as credenciais locais
 
@@ -94,8 +96,8 @@ Editar `apps/web/src/environments/environment.development.ts`:
 ```typescript
 export const environment = {
   production: false,
-  supabaseUrl: 'http://localhost:54321',   // URL exibida pelo CLI
-  supabaseAnonKey: 'eyJ...',              // anon key exibida pelo CLI
+  supabaseUrl: 'http://127.0.0.1:54321',                  // Project URL do CLI
+  supabaseAnonKey: 'sb_publishable_...',                  // chave Publishable (ou anon key legada)
   appName: 'Amigo Secreto ou Inimigo',
 };
 ```
