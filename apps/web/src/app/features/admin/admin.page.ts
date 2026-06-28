@@ -143,6 +143,33 @@ import { Group, ParticipantPublicView } from '../../core/models';
             </button>
           </section>
 
+          <section
+            class="rounded-[2rem] bg-white p-5 shadow-[0_18px_45px_rgba(26,26,46,0.07)]"
+          >
+            <h2 class="text-neutral text-xl font-black">Senha do grupo</h2>
+            <p class="mt-2 text-sm leading-6 font-medium text-neutral-400">
+              {{ hasPassword() ? 'Senha definida. Compartilhe-a com os participantes para entrarem pelo link.' : 'Defina uma senha e compartilhe com os participantes para proteger a entrada.' }}
+            </p>
+            <input
+              type="password"
+              autocomplete="off"
+              [value]="passwordInput()"
+              (input)="onPasswordInput($event)"
+              [placeholder]="hasPassword() ? 'Nova senha (em branco remove)' : 'Defina uma senha'"
+              class="bg-base-200 mt-4 w-full rounded-full border border-neutral-100 px-5 py-4 text-sm font-bold text-neutral outline-none"
+            />
+            <button
+              type="button"
+              class="border-primary-200 text-primary hover:bg-primary-50 focus:ring-primary-300 mt-3 min-h-12 w-full rounded-full border text-sm font-extrabold transition focus:ring-2 focus:outline-none active:scale-[0.98]"
+              (click)="savePassword()"
+            >
+              Salvar senha
+            </button>
+            @if (passwordStatus()) {
+              <p class="text-primary mt-3 text-center text-xs font-bold">{{ passwordStatus() }}</p>
+            }
+          </section>
+
           <section>
             <div class="mb-4 flex items-center justify-between">
               <h2 class="text-neutral text-xl font-black">
@@ -272,6 +299,34 @@ import { Group, ParticipantPublicView } from '../../core/models';
                   {{ copyLabel() }}
                 </button>
               </div>
+            </article>
+            <article
+              class="rounded-[2rem] border border-[#ececf3] bg-white p-8 shadow-[0_18px_45px_rgba(26,26,46,0.06)]"
+            >
+              <h2 class="text-neutral text-2xl font-black">Senha do grupo</h2>
+              <p class="mt-3 text-sm leading-6 font-medium text-neutral-400">
+                {{ hasPassword() ? 'Senha definida. Compartilhe-a com os participantes para entrarem pelo link.' : 'Defina uma senha e compartilhe com os participantes para proteger a entrada.' }}
+              </p>
+              <div class="mt-6 flex gap-3">
+                <input
+                  type="password"
+                  autocomplete="off"
+                  [value]="passwordInput()"
+                  (input)="onPasswordInput($event)"
+                  [placeholder]="hasPassword() ? 'Nova senha (em branco remove)' : 'Defina uma senha'"
+                  class="flex-1 rounded-full border border-[#ececf3] bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none"
+                />
+                <button
+                  type="button"
+                  class="border-primary-200 text-primary hover:bg-primary-50 focus:ring-primary-300 rounded-full border px-7 py-4 text-sm font-extrabold transition focus:ring-2 focus:outline-none active:scale-[0.98]"
+                  (click)="savePassword()"
+                >
+                  Salvar
+                </button>
+              </div>
+              @if (passwordStatus()) {
+                <p class="text-primary mt-3 text-sm font-bold">{{ passwordStatus() }}</p>
+              }
             </article>
             <button
               type="button"
@@ -403,6 +458,10 @@ export class AdminPage {
   readonly copyLabel = signal<string>('Copiar Link');
   readonly drawLabel = signal<string>('🎉 Sortear Nomes');
 
+  readonly passwordInput = signal<string>('');
+  readonly passwordStatus = signal<string>('');
+  readonly hasPassword = computed(() => !!this.group()?.join_password_hash);
+
   readonly priceLimitLabel = computed(() => {
     const priceLimit = this.group()?.price_limit;
     if (priceLimit === undefined || priceLimit === null) {
@@ -470,6 +529,24 @@ export class AdminPage {
     } catch (err) {
       console.error(err);
       this.apiError.report('Erro ao adicionar participante. Tente novamente.');
+    }
+  }
+
+  onPasswordInput(event: Event): void {
+    this.passwordInput.set((event.target as HTMLInputElement).value);
+  }
+
+  async savePassword(): Promise<void> {
+    const value = this.passwordInput().trim();
+    try {
+      await this.groupService.setGroupPassword(this.adminToken(), value);
+      this.passwordStatus.set(value ? 'Senha salva ✓' : 'Senha removida ✓');
+      this.passwordInput.set('');
+      this.groupResource.reload();
+      setTimeout(() => this.passwordStatus.set(''), 2500);
+    } catch (err) {
+      console.error(err);
+      this.apiError.report('Erro ao salvar a senha. Tente novamente.');
     }
   }
 

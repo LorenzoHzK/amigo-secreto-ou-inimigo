@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   input,
@@ -9,7 +10,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { Group } from '../../core/models';
+import { GroupPublicView, ParticipantPublicView } from '../../core/models';
 import { GroupService } from '../../core/services/group.service';
 import { ParticipantService } from '../../core/services/participant.service';
 
@@ -36,7 +37,7 @@ import { ParticipantService } from '../../core/services/participant.service';
             <p class="text-primary text-xs font-black tracking-[0.2em] uppercase">Você foi convidado</p>
             <h1 class="text-neutral mt-4 text-4xl leading-tight font-black">{{ group()?.name }}</h1>
             <p class="mt-4 text-sm leading-6 font-medium text-neutral-400">
-              Entre com seu nome para participar do grupo. O Supabase grava os participantes e o link privado.
+              Selecione o seu nome na lista do organizador e confirme a senha do grupo para entrar.
             </p>
             <div class="mt-6 rounded-[1.5rem] bg-primary-50 p-4 text-sm font-bold text-primary-700">
               {{ priceLimitLabel() }}
@@ -47,27 +48,56 @@ import { ParticipantService } from '../../core/services/participant.service';
             <p class="text-primary text-xs font-black tracking-[0.18em] uppercase">Entrar</p>
             <h2 class="text-neutral mt-4 text-3xl leading-tight font-black">Confirme sua entrada</h2>
 
-            <label class="mt-6 block">
-              <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">Seu nome</span>
-              <input
-                type="text"
-                formControlName="participantName"
-                autocomplete="name"
-                class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
-                placeholder="Seu nome completo"
-              />
-              @if (form.controls.participantName.touched && form.controls.participantName.invalid) {
-                <p class="mt-2 text-xs font-bold text-error">Informe seu nome para continuar.</p>
-              }
-            </label>
+            @if (unclaimed().length === 0) {
+              <p class="mt-6 rounded-[1.25rem] bg-[#f8f8fb] p-4 text-sm font-bold text-neutral-500">
+                Não há nomes disponíveis para entrar. Todos já entraram ou o
+                organizador ainda não adicionou você. Fale com quem criou o grupo.
+              </p>
+            } @else {
+              <label class="mt-6 block">
+                <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">Seu nome</span>
+                <select
+                  formControlName="participantId"
+                  class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
+                >
+                  <option value="" disabled>Selecione seu nome</option>
+                  @for (p of unclaimed(); track p.id) {
+                    <option [value]="p.id">{{ p.name }}</option>
+                  }
+                </select>
+                @if (form.controls.participantId.touched && form.controls.participantId.invalid) {
+                  <p class="mt-2 text-xs font-bold text-error">Selecione seu nome para continuar.</p>
+                }
+              </label>
 
-            <button
-              type="submit"
-              [disabled]="form.invalid || isSubmitting()"
-              class="bg-primary shadow-brand-lg hover:bg-primary-700 mt-7 w-full rounded-full px-8 py-4 text-base font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {{ buttonLabel() }}
-            </button>
+              @if (group()?.has_join_password) {
+                <label class="mt-5 block">
+                  <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">Senha do grupo</span>
+                  <input
+                    type="password"
+                    formControlName="password"
+                    autocomplete="off"
+                    class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
+                    placeholder="Senha informada pelo organizador"
+                  />
+                  @if (form.controls.password.touched && form.controls.password.invalid) {
+                    <p class="mt-2 text-xs font-bold text-error">Informe a senha do grupo.</p>
+                  }
+                </label>
+              }
+
+              <button
+                type="submit"
+                [disabled]="form.invalid || isSubmitting()"
+                class="bg-primary shadow-brand-lg hover:bg-primary-700 mt-7 w-full rounded-full px-8 py-4 text-base font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {{ buttonLabel() }}
+              </button>
+
+              @if (formError()) {
+                <p class="mt-4 text-center text-sm font-bold text-error">{{ formError() }}</p>
+              }
+            }
           </form>
         </div>
       }
@@ -82,15 +112,23 @@ export class JoinPage {
   private readonly groupService = inject(GroupService);
   private readonly participantService = inject(ParticipantService);
 
-  readonly group = signal<Group | null>(null);
+  readonly group = signal<GroupPublicView | null>(null);
+  readonly unclaimed = signal<ParticipantPublicView[]>([]);
   readonly isLoading = signal(true);
   readonly error = signal<string | null>(null);
+  readonly formError = signal<string | null>(null);
   readonly isSubmitting = signal(false);
   readonly buttonLabel = signal('Entrar no grupo');
 
   readonly form = this.fb.nonNullable.group({
-    participantName: ['', [Validators.required, Validators.minLength(2)]],
+    participantId: ['', [Validators.required]],
+    password: [''],
   });
+
+  // A senha só é obrigatória se o grupo exigir senha.
+  private readonly passwordRequired = computed(
+    () => this.group()?.has_join_password === true,
+  );
 
   constructor() {
     effect(() => {
@@ -106,7 +144,7 @@ export class JoinPage {
     this.error.set(null);
 
     try {
-      const group = await this.groupService.getGroupByInviteToken(token);
+      const group = await this.groupService.getPublicGroupByInviteToken(token);
       if (!group) {
         this.error.set('Link de convite inválido ou expirado.');
         return;
@@ -117,6 +155,16 @@ export class JoinPage {
       }
 
       this.group.set(group);
+
+      const participants = await this.participantService.getParticipantsByGroupId(
+        group.id,
+      );
+      this.unclaimed.set(participants.filter((p) => p.claimed_at === null));
+
+      if (this.passwordRequired()) {
+        this.form.controls.password.addValidators(Validators.required);
+        this.form.controls.password.updateValueAndValidity();
+      }
     } catch (error) {
       console.error(error);
       this.error.set('Erro ao carregar o grupo. Tente novamente.');
@@ -138,6 +186,8 @@ export class JoinPage {
   }
 
   async joinGroup(): Promise<void> {
+    this.formError.set(null);
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -148,44 +198,62 @@ export class JoinPage {
       return;
     }
 
-    const name = this.form.controls.participantName.value.trim();
-
-    try {
-      const existing = await this.participantService.getParticipantsByGroupId(group.id);
-      const duplicate = existing.some(
-        (p) => p.name.toLowerCase() === name.toLowerCase(),
-      );
-      if (duplicate) {
-        this.error.set(`Já existe um participante com o nome "${name}" neste grupo.`);
-        return;
-      }
-    } catch (error) {
-      // Continuar mesmo se a verificação falhar — o banco tem unique constraints se necessário
-    }
+    const participantId = this.form.controls.participantId.value;
+    const password = this.form.controls.password.value;
 
     this.isSubmitting.set(true);
     this.buttonLabel.set('Confirmando...');
 
     try {
-      const participant = await this.participantService.addParticipant(
-        group.id,
-        name,
+      const result = await this.participantService.claimParticipant(
+        this.inviteToken(),
+        password,
+        participantId,
       );
 
-      const storedPersonal = this.readTokenList('my_personal_tokens');
-      if (!storedPersonal.includes(participant.personal_token)) {
-        storedPersonal.push(participant.personal_token);
-        localStorage.setItem('my_personal_tokens', JSON.stringify(storedPersonal));
+      if (result.status === 'ok' && result.personal_token) {
+        const token = result.personal_token;
+        const stored = this.readTokenList('my_personal_tokens');
+        if (!stored.includes(token)) {
+          stored.push(token);
+          localStorage.setItem('my_personal_tokens', JSON.stringify(stored));
+        }
+        this.buttonLabel.set('Entrada confirmada ✓');
+        setTimeout(() => void this.router.navigateByUrl(`/revelar/${token}`), 400);
+        return;
       }
 
-      this.buttonLabel.set('Entrada confirmada ✓');
-      setTimeout(() => void this.router.navigateByUrl(`/revelar/${participant.personal_token}`), 400);
+      this.buttonLabel.set('Entrar no grupo');
+      this.formError.set(this.messageFor(result.status));
+
+      // Se o nome já foi reivindicado, remove-o da lista local.
+      if (result.status === 'already_claimed') {
+        this.unclaimed.update((list) =>
+          list.filter((p) => p.id !== participantId),
+        );
+        this.form.controls.participantId.setValue('');
+      }
     } catch (error) {
       console.error(error);
-      this.buttonLabel.set('Erro ao entrar');
-      setTimeout(() => this.buttonLabel.set('Entrar no grupo'), 2200);
+      this.buttonLabel.set('Entrar no grupo');
+      this.formError.set('Erro ao entrar. Tente novamente.');
     } finally {
       this.isSubmitting.set(false);
+    }
+  }
+
+  private messageFor(status: string): string {
+    switch (status) {
+      case 'wrong_password':
+        return 'Senha do grupo incorreta.';
+      case 'already_claimed':
+        return 'Esse nome já foi reivindicado. Selecione outro ou fale com o organizador.';
+      case 'not_found':
+        return 'Nome não encontrado na lista. Peça ao organizador para adicionar você.';
+      case 'group_unavailable':
+        return 'Este grupo não está disponível para entrada.';
+      default:
+        return 'Não foi possível entrar. Tente novamente.';
     }
   }
 

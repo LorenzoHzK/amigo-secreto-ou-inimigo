@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { Group, CreateGroupPayload } from '../models';
+import { Group, CreateGroupPayload, GroupPublicView } from '../models';
 import { SupabaseRestService } from './supabase-rest.service';
 
 @Injectable({ providedIn: 'root' })
@@ -20,6 +20,32 @@ export class GroupService {
     return firstValueFrom(
       this.supabase.selectOne<Group>(this.table, {
         filters: { invite_token: token },
+      }),
+    );
+  }
+
+  // Visão pública por invite_token (inclui has_join_password, sem admin_token).
+  // Usada na tela de entrada para decidir se pede senha.
+  async getPublicGroupByInviteToken(
+    token: string,
+  ): Promise<GroupPublicView | null> {
+    return firstValueFrom(
+      this.supabase.selectOne<GroupPublicView>('groups_public', {
+        filters: { invite_token: token },
+      }),
+    );
+  }
+
+  // Define/altera/limpa a senha do grupo (autorizado pelo admin_token).
+  // Senha vazia remove a proteção. Retorna true se o grupo foi encontrado.
+  async setGroupPassword(
+    adminToken: string,
+    password: string,
+  ): Promise<boolean> {
+    return firstValueFrom(
+      this.supabase.rpc<boolean>('set_group_password', {
+        p_admin_token: adminToken,
+        p_password: password,
       }),
     );
   }

@@ -14,6 +14,7 @@ export interface Group {
   created_at: string;
   updated_at: string;
   owner_id: string | null;
+  join_password_hash?: string | null;
 }
 
 // Payload para criação — campos que o cliente envia
@@ -24,11 +25,12 @@ export type CreateGroupPayload = {
   owner_id?: string | null;
 };
 
-// Visão pública do grupo (sem admin_token)
+// Visão pública do grupo (sem admin_token). has_join_password indica se o
+// grupo exige senha para entrar, sem nunca expor o hash da senha.
 export type GroupPublicView = Pick<
   Group,
   'id' | 'name' | 'price_limit' | 'reveal_date' | 'status' | 'drawn_at'
->;
+> & { has_join_password?: boolean };
 
 // ===== ENTIDADE: PARTICIPANT =====
 
@@ -41,6 +43,7 @@ export interface Participant {
   revealed_at: string | null;
   created_at: string;
   owner_id: string | null;
+  claimed_at: string | null;
 }
 
 // Payload para entrar no grupo
@@ -49,8 +52,23 @@ export type JoinGroupPayload = {
   name: string;
 };
 
-// Visão pública de participante (sem drawn_participant_id)
-export type ParticipantPublicView = Pick<Participant, 'id' | 'name' | 'created_at'>;
+// Visão pública de participante (sem drawn_participant_id nem personal_token).
+// claimed_at indica se a pessoa já reivindicou o seu lugar pelo link.
+export type ParticipantPublicView = Pick<
+  Participant,
+  'id' | 'name' | 'created_at' | 'claimed_at'
+>;
+
+// Resultado da RPC claim_participant
+export interface ClaimResult {
+  status:
+    | 'ok'
+    | 'wrong_password'
+    | 'already_claimed'
+    | 'not_found'
+    | 'group_unavailable';
+  personal_token?: string;
+}
 
 // ===== RESULTADO DA RPC get_my_draw =====
 
