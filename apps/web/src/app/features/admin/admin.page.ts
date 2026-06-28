@@ -184,7 +184,7 @@ import { Group, ParticipantPublicView } from '../../core/models';
                 <app-participant-row
                   [name]="participant.name"
                   [initials]="participant.name | initials"
-                  [showRemove]="!isDrawn()"
+                  [showRemove]="!isDrawn() && isOwner()"
                   (remove)="deleteParticipant(participant.id, participant.name)"
                 />
               } @empty {
@@ -323,7 +323,7 @@ import { Group, ParticipantPublicView } from '../../core/models';
                 <app-participant-row
                   [name]="participant.name"
                   [initials]="participant.name | initials"
-                  [showRemove]="!isDrawn()"
+                  [showRemove]="!isDrawn() && isOwner()"
                   (remove)="deleteParticipant(participant.id, participant.name)"
                 />
               } @empty {
@@ -391,6 +391,14 @@ export class AdminPage {
   });
 
   readonly isDrawn = computed(() => this.group()?.drawn_at !== null);
+
+  // Só o dono autenticado do grupo pode remover participantes (a RPC
+  // remove_participant exige auth.uid() = owner_id). Logo, o botão de
+  // excluir só deve aparecer para ele.
+  readonly isOwner = computed(() => {
+    const ownerId = this.group()?.owner_id;
+    return !!ownerId && this.auth.user()?.id === ownerId;
+  });
 
   readonly copyLabel = signal<string>('Copiar Link');
   readonly drawLabel = signal<string>('🎉 Sortear Nomes');
@@ -466,7 +474,7 @@ export class AdminPage {
   }
 
   async deleteParticipant(id: string, name: string): Promise<void> {
-    if (this.isDrawn()) {
+    if (this.isDrawn() || !this.isOwner()) {
       return;
     }
 
