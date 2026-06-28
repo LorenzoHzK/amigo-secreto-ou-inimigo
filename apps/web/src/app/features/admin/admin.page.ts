@@ -476,7 +476,12 @@ export class AdminPage {
     if (!confirmed) return;
 
     try {
-      await this.participantService.removeParticipant(id);
+      const removed = await this.participantService.removeParticipant(id);
+      if (!removed) {
+        this.apiError.report(
+          'Não foi possível remover. Apenas o organizador (logado) pode remover, e somente antes do sorteio.',
+        );
+      }
       this.participantsResource.reload();
     } catch (err) {
       console.error(err);

@@ -40,9 +40,15 @@ export class ParticipantService {
     return newParticipant;
   }
 
-  async removeParticipant(participantId: string): Promise<void> {
-    await firstValueFrom(
-      this.supabase.deleteOne(this.table, { id: participantId }),
+  // Remoção via RPC SECURITY DEFINER: um DELETE direto falharia (participants
+  // tem SELECT revogado, exigido para ler id/group_id no DELETE+RLS). A RPC
+  // só remove se o chamador for o dono do grupo e o sorteio não tiver ocorrido.
+  // Retorna true se removeu.
+  async removeParticipant(participantId: string): Promise<boolean> {
+    return firstValueFrom(
+      this.supabase.rpc<boolean>('remove_participant', {
+        p_participant_id: participantId,
+      }),
     );
   }
 }
