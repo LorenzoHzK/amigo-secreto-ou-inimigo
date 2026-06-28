@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@plugin "daisyui";
-@source "./app";
+@import 'tailwindcss';
+@plugin 'daisyui';
+@source './app';
 
 html {
   min-height: 100%;
@@ -95,14 +95,14 @@ body {
   --spacing-18: 4.5rem;
   --spacing-22: 5.5rem;
 
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Inter", system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Inter', system-ui, sans-serif;
 
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   --animate-bounce-subtle: bounce 2s infinite;
 }
 
-[data-theme="nexus"] {
+[data-theme='nexus'] {
   --color-primary: #6c3bff;
   --color-primary-content: #ffffff;
   --color-secondary: #ff6b6b;

@@ -64,8 +64,8 @@ Você atua como um **Professor Assistente**.
 2. **Ação de Ambiente (SDD 9.2):** Crie a pasta `apps/web/src/environments/` e gere os arquivos `environment.ts` e `environment.development.ts` contendo o contrato básico exigido:
    ```typescript
    export const environment = {
-     apiUrl: "http://localhost:3000/api",
-     googleClientId: "INSERIR_CLIENT_ID_AQUI",
+     apiUrl: 'http://localhost:3000/api',
+     googleClientId: 'INSERIR_CLIENT_ID_AQUI',
    };
    ```
 3. **Ação App Config:** No arquivo `apps/web/src/app/app.config.ts`, adicione o `provideHttpClient()` aos providers.
@@ -82,14 +82,14 @@ Você atua como um **Professor Assistente**.
 - **Ação (Configuração):** Garanta que o arquivo `apps/web/src/styles.css` contenha apenas a diretiva de importação inicial:
 
   ```css
-  @import "tailwindcss";
+  @import 'tailwindcss';
   ```
 
 - **Ação (PostCSS):** Certifique-se de que o arquivo `apps/web/postcssrc.json` está presente para habilitar o processamento do plugin:
 
   ```javascript
   export default {
-    plugins: { "@tailwindcss/postcss": {} },
+    plugins: { '@tailwindcss/postcss': {} },
   };
   ```
 

@@ -33,16 +33,16 @@
 
 ### 📖 3.1. Glossário Técnico
 
-| Termo (PT-BR) | Entidade (EN) | Observação |
-| :--- | :--- | :--- |
-| **Grupo** | `group` | `id`, `name`, `admin_token`, `invite_token`, `price_limit`, `reveal_date`, `status`, `drawn_at`, `owner_id` |
-| **Organizador** | `admin_token` / `owner_id` | Gerencia pelo link de admin; logado, vê o grupo no dashboard e pode remover participantes |
-| **Participante** | `participant` | `id`, `group_id`, `name`, `personal_token`, `drawn_participant_id`, `revealed_at`, `claimed_at` |
-| **Sorteio** | `drawn_at` / `status` | Distribuição (derangement) feita **atomicamente** na Edge Function `perform-draw` |
-| **Par** | `participant.drawn_participant_id` | FK para outro participante (nunca exposto cru ao cliente) |
-| **Link de Admin** | `group.admin_token` | "Senha" do organizador, gerada no servidor |
-| **Link de Convite** | `group.invite_token` | Abre a página informativa de convite (orienta a usar o link individual) |
-| **Link Individual** | `participant.personal_token` | Link privado de revelação `/revelar/<token>`. O organizador obtém os links via RPC `get_participant_links` e distribui um a cada pessoa |
+| Termo (PT-BR)       | Entidade (EN)                      | Observação                                                                                                                              |
+| :------------------ | :--------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
+| **Grupo**           | `group`                            | `id`, `name`, `admin_token`, `invite_token`, `price_limit`, `reveal_date`, `status`, `drawn_at`, `owner_id`                             |
+| **Organizador**     | `admin_token` / `owner_id`         | Gerencia pelo link de admin; logado, vê o grupo no dashboard e pode remover participantes                                               |
+| **Participante**    | `participant`                      | `id`, `group_id`, `name`, `personal_token`, `drawn_participant_id`, `revealed_at`, `claimed_at`                                         |
+| **Sorteio**         | `drawn_at` / `status`              | Distribuição (derangement) feita **atomicamente** na Edge Function `perform-draw`                                                       |
+| **Par**             | `participant.drawn_participant_id` | FK para outro participante (nunca exposto cru ao cliente)                                                                               |
+| **Link de Admin**   | `group.admin_token`                | "Senha" do organizador, gerada no servidor                                                                                              |
+| **Link de Convite** | `group.invite_token`               | Abre a página informativa de convite (orienta a usar o link individual)                                                                 |
+| **Link Individual** | `participant.personal_token`       | Link privado de revelação `/revelar/<token>`. O organizador obtém os links via RPC `get_participant_links` e distribui um a cada pessoa |
 
 > **Modelo de acesso do participante:** cada pessoa acessa o seu par pelo **link individual** (`/revelar/<personal_token>`), que é um segredo único — ninguém vê o par de outro, e funciona antes/depois do sorteio. (Um modelo anterior de "senha do grupo + reivindicar nome" foi descartado por permitir um membro ver o par de outro — ver migration 013.)
 
@@ -111,7 +111,8 @@ export type CreateGroupPayload = {
 
 // Visão pública do grupo (sem admin_token). has_join_password é informativo.
 export type GroupPublicView = Pick<
-  Group, 'id' | 'name' | 'price_limit' | 'reveal_date' | 'status' | 'drawn_at'
+  Group,
+  'id' | 'name' | 'price_limit' | 'reveal_date' | 'status' | 'drawn_at'
 > & { has_join_password?: boolean };
 
 export interface Participant {
@@ -128,12 +129,16 @@ export interface Participant {
 
 // Visão pública (sem personal_token nem drawn_participant_id)
 export type ParticipantPublicView = Pick<
-  Participant, 'id' | 'name' | 'created_at' | 'claimed_at' | 'revealed_at'
+  Participant,
+  'id' | 'name' | 'created_at' | 'claimed_at' | 'revealed_at'
 >;
 
 // Link individual de revelação — retornado SÓ ao admin (RPC get_participant_links)
 export interface ParticipantLink {
-  id: string; name: string; personal_token: string; revealed_at: string | null;
+  id: string;
+  name: string;
+  personal_token: string;
+  revealed_at: string | null;
 }
 
 export interface MyDrawResult {
@@ -143,7 +148,9 @@ export interface MyDrawResult {
 }
 
 export interface DrawResponse {
-  drawn_at: string; participant_count: number; group_name: string;
+  drawn_at: string;
+  participant_count: number;
+  group_name: string;
 }
 ```
 
@@ -176,18 +183,18 @@ app/
 
 ### 🚦 5.2. Mapa de Rotas, Guards e Resolver
 
-| Rota | Componente | Proteção | Observação |
-| :--- | :--- | :--- | :--- |
-| `/` | `HomePage` | `guestGuard` | Landing; logado → redireciona a `/grupos` |
-| `/login` · `/registrar` | `LoginPage` · `RegisterPage` | `guestGuard` | Só deslogado |
-| `/grupos` | `GruposShellComponent` | — | **Rota pai (layout)** com `<router-outlet>` |
-| `/grupos` → `''` | `GroupsPage` | `authGuard` | **Rota filha** — dashboard do organizador |
-| `/grupos/criar` → `'criar'` | `CreateGroupPage` | — (pública) | **Rota filha** — criação (com ou sem conta) |
-| `/admin/:adminToken` | `AdminPage` | `adminTokenGuard` | Painel + links individuais |
-| `/entrar/:inviteToken` | `JoinPage` | `inviteTokenGuard` | Página informativa (usar link individual) |
-| `/revelar/:personalToken` | `RevealPage` | — + **`revealResolver`** | Resolver pré-carrega `get_my_draw` |
-| `/grupo-encerrado` | `GroupClosedPage` | — | Aviso informativo |
-| `**` | `NotFoundPage` | — | 404 |
+| Rota                        | Componente                   | Proteção                 | Observação                                  |
+| :-------------------------- | :--------------------------- | :----------------------- | :------------------------------------------ |
+| `/`                         | `HomePage`                   | `guestGuard`             | Landing; logado → redireciona a `/grupos`   |
+| `/login` · `/registrar`     | `LoginPage` · `RegisterPage` | `guestGuard`             | Só deslogado                                |
+| `/grupos`                   | `GruposShellComponent`       | —                        | **Rota pai (layout)** com `<router-outlet>` |
+| `/grupos` → `''`            | `GroupsPage`                 | `authGuard`              | **Rota filha** — dashboard do organizador   |
+| `/grupos/criar` → `'criar'` | `CreateGroupPage`            | — (pública)              | **Rota filha** — criação (com ou sem conta) |
+| `/admin/:adminToken`        | `AdminPage`                  | `adminTokenGuard`        | Painel + links individuais                  |
+| `/entrar/:inviteToken`      | `JoinPage`                   | `inviteTokenGuard`       | Página informativa (usar link individual)   |
+| `/revelar/:personalToken`   | `RevealPage`                 | — + **`revealResolver`** | Resolver pré-carrega `get_my_draw`          |
+| `/grupo-encerrado`          | `GroupClosedPage`            | —                        | Aviso informativo                           |
+| `**`                        | `NotFoundPage`               | —                        | 404                                         |
 
 - **Guards (ID19):** `auth.guard` (sessão), `guest.guard` (logado → /grupos), `admin-token.guard` e `invite-token.guard` (validam posse de token).
 - **Resolver (ID19):** `reveal.resolver` (`ResolveFn<MyDrawResult|null>`) entrega os dados via `resolve: { resolvedDraw }`; `RevealPage` os recebe por `input()` (graças a `withComponentInputBinding()`).
@@ -198,8 +205,8 @@ app/
 `GroupsPage` (desktop) carrega o `GroupGridComponent` sob demanda:
 
 ```html
-@defer (on viewport) { <app-group-grid [groups]="desktopGroups()" /> }
-@placeholder { <skeleton/> } @loading (minimum 200ms) { <spinner/> }
+@defer (on viewport) { <app-group-grid [groups]="desktopGroups()" /> } @placeholder { <skeleton /> }
+@loading (minimum 200ms) { <spinner /> }
 ```
 
 Resultado: o `GroupGridComponent` é code-split em um **chunk próprio**, baixado só quando entra na viewport. (Importante: o tipo `DesktopGroupCard` é importado como `type` para não manter o módulo eager e permitir o split.)
@@ -231,6 +238,7 @@ Resultado: o `GroupGridComponent` é code-split em um **chunk próprio**, baixad
 - **Delete:** `remove_participant` (RPC; só o dono, antes do sorteio).
 
 ### Edge Function `perform-draw`
+
 `POST /functions/v1/perform-draw { admin_token }` — roda com **service_role** (bypassa RLS): busca o grupo, valida, carrega participantes, gera o **derangement** (ninguém tira a si mesmo), grava os pares atomicamente e marca o grupo como `drawn`.
 
 ---
@@ -255,21 +263,21 @@ Resultado: o `GroupGridComponent` é code-split em um **chunk próprio**, baixad
 
 ### 8.1. Migrations (`apps/api/supabase/migrations`)
 
-| # | Conteúdo |
-| :-- | :-- |
-| 000 | Schema base (`groups`, `participants`) |
-| 001 | Índices nos tokens |
-| 002 | Colunas `status`/`reveal_date`/`updated_at`/`revealed_at` + trigger |
-| 003 | View `participants_public` + revoga SELECT direto + grants INSERT/DELETE |
-| 004 | RPC `get_my_draw` (atualizada na 013 para incluir `revealed_at`) |
-| 005 | Políticas RLS |
-| 006 | View `groups_public` (sem `admin_token`) |
-| 007 | Tokens de grupo `DEFAULT gen_random_uuid()` |
-| 008 | RPCs `get_my_participation` + `mark_revealed` |
-| 009 | Grants de tabela em `groups` (anon/authenticated) |
-| 010 | RPC `remove_participant` (dono, antes do sorteio) |
-| 011 | (descartado) Senha do grupo + claim — substituído pelo modelo de link individual |
-| 012 | Grants de tabela em `groups`/`participants` para `service_role` (corrige o `perform-draw`) |
+| #   | Conteúdo                                                                                                    |
+| :-- | :---------------------------------------------------------------------------------------------------------- |
+| 000 | Schema base (`groups`, `participants`)                                                                      |
+| 001 | Índices nos tokens                                                                                          |
+| 002 | Colunas `status`/`reveal_date`/`updated_at`/`revealed_at` + trigger                                         |
+| 003 | View `participants_public` + revoga SELECT direto + grants INSERT/DELETE                                    |
+| 004 | RPC `get_my_draw` (atualizada na 013 para incluir `revealed_at`)                                            |
+| 005 | Políticas RLS                                                                                               |
+| 006 | View `groups_public` (sem `admin_token`)                                                                    |
+| 007 | Tokens de grupo `DEFAULT gen_random_uuid()`                                                                 |
+| 008 | RPCs `get_my_participation` + `mark_revealed`                                                               |
+| 009 | Grants de tabela em `groups` (anon/authenticated)                                                           |
+| 010 | RPC `remove_participant` (dono, antes do sorteio)                                                           |
+| 011 | (descartado) Senha do grupo + claim — substituído pelo modelo de link individual                            |
+| 012 | Grants de tabela em `groups`/`participants` para `service_role` (corrige o `perform-draw`)                  |
 | 013 | Remove `claim_participant`/`set_group_password`; `get_my_draw` + `revealed_at`; RPC `get_participant_links` |
 
 ---
@@ -284,6 +292,7 @@ Resultado: o `GroupGridComponent` é code-split em um **chunk próprio**, baixad
 ## ✅ 10. Testes (ID33 — TDD com IA)
 
 `vitest run` (`npm run test:unit`). Foco em **regras de negócio**:
+
 - `draw.service.spec.ts`: algoritmo de **derangement** (ninguém se tira, cobre todos exatamente uma vez, mínimo de 3) + chamada da Edge Function.
 - `admin-token.guard.spec.ts`: guard (token válido → `true`; inválido/erro/ausente → `UrlTree '/'`).
 
