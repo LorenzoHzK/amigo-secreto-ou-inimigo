@@ -17,8 +17,10 @@ import { InfoBadgeComponent } from '../../shared/components/info-badge/info-badg
 import { MobileShellComponent } from '../../shared/components/mobile-shell/mobile-shell.component';
 import { DashboardShellComponent } from '../../shared/components/dashboard-shell/dashboard-shell.component';
 import {
-  DesktopGroupCard,
   GroupGridComponent,
+  // type-only: importar o tipo como valor manteria o módulo eager e impediria
+  // o @defer de code-split o GroupGridComponent.
+  type DesktopGroupCard,
 } from '../../shared/components/group-grid/group-grid.component';
 import { GroupService } from '../../core/services/group.service';
 import { ParticipantService } from '../../core/services/participant.service';
@@ -169,7 +171,19 @@ interface GroupMock {
           </div>
         } @else {
           @if (desktopGroups().length > 0) {
-            <app-group-grid [groups]="desktopGroups()" />
+            @defer (on viewport) {
+              <app-group-grid [groups]="desktopGroups()" />
+            } @placeholder {
+              <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                <div class="h-44 animate-pulse rounded-[2rem] bg-white/60"></div>
+                <div class="h-44 animate-pulse rounded-[2rem] bg-white/60"></div>
+                <div class="h-44 animate-pulse rounded-[2rem] bg-white/60"></div>
+              </div>
+            } @loading (minimum 200ms) {
+              <div class="flex justify-center py-10">
+                <span class="loading loading-spinner loading-lg text-primary"></span>
+              </div>
+            }
           } @else {
             <div
               class="rounded-[2rem] bg-white p-12 text-center shadow-[0_18px_45px_rgba(26,26,46,0.07)]"

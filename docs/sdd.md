@@ -1,49 +1,50 @@
 # 🛠️ Software Design Document (SDD)
 
 **Projeto:** Amigo Secreto ou Inimigo
-**Versão:** 1.0.0
-**Status:** 🟢 Atualizado (Zoneless / Signals / Vitest / Supabase REST client)
+**Versão:** 2.0.0
+**Status:** 🟢 Atualizado (Zoneless / Signals / Vitest / Supabase REST + RPCs / PWA)
 
 ---
 
 ## 🤖 1. Orquestração e Contexto de IA (MCP)
 
-- **Supabase Local / Deno CLI:** Permite o desenvolvimento e testes do banco de dados localmente via Docker.
-- **MCP de Automação:** Orquestração do plano de desenvolvimento e cobertura de testes.
-- **Vitest Unit Runner:** Execução direta no workspace `apps/web` com tempo de inicialização mínimo.
+- **Supabase Local / Deno CLI:** desenvolvimento e testes do banco localmente via Docker (`supabase start`, `db reset`, Edge Functions).
+- **MCP de Automação:** orquestração do plano de desenvolvimento, auditorias e cobertura de testes.
+- **Vitest Unit Runner:** execução direta no workspace `apps/web` com inicialização mínima.
 
 ---
 
 ## 📦 2. Stack Tecnológica e Bibliotecas
 
-> Definição estrita das tecnologias utilizadas (`package.json`).
-
-- **Core:** Angular 21 (Standalone Components / Signals / Zoneless / `resource()` API para gerenciamento de dados assíncronos).
-- **BaaS & Auth:** Supabase REST Client customizado via HTTP (sem biblioteca pesada `@supabase/supabase-js` no client).
-- **Estilização & UI:** Tailwind CSS v4 (CSS-First), DaisyUI v5.
-- **Roteamento:** Angular Router com Functional Guards.
+- **Core:** Angular 21 (Standalone Components / Signals / Zoneless / `resource()` para dados assíncronos / `@defer` para carregamento sob demanda).
+- **BaaS & Auth:** Supabase — PostgreSQL + PostgREST + Auth (GoTrue) + Edge Functions (Deno). Cliente REST **customizado via `HttpClient`** (sem a lib `@supabase/supabase-js` no browser).
+- **PWA:** `@angular/service-worker` (ngsw) + `manifest.webmanifest` + ícones PNG.
+- **Estilização & UI:** Tailwind CSS v4 (CSS-First) + DaisyUI v5.
+- **Roteamento:** Angular Router — Functional Guards, **Functional Resolver** e **rotas filhas (nested)**.
 - **Formulários:** Angular Reactive Forms.
-- **Utilitários:** Tokens de grupo (`admin_token`/`invite_token`) são gerados no servidor via `DEFAULT gen_random_uuid()` (migration 007). `crypto.randomUUID()` é usado apenas para `id`s e, temporariamente, para `personal_token` (migração para RPC `join_group` planejada).
-- **Testes & Qualidade:** Vitest + jsdom + `@analogjs/vitest-angular` para testes unitários, ESLint (Flat Config) e Prettier.
+- **Reatividade:** ponte RxJS ↔ Signals via `toSignal()` / `toObservable()`.
+- **Testes & Qualidade:** Vitest + jsdom + `@analogjs/vitest-angular`, ESLint (Flat Config), Prettier.
+
+> Tokens de grupo (`admin_token` / `invite_token`) são gerados **no servidor** (`DEFAULT gen_random_uuid()`, migration 007). `crypto.randomUUID()` é usado no cliente apenas para `id`s e para o `personal_token` de participantes adicionados pelo organizador.
 
 ---
 
 ## 🗄️ 3. Arquitetura de Dados
 
-### 📖 3.1. Glossário Técnico (Mapeamento)
+### 📖 3.1. Glossário Técnico
 
-| Termo PRD (PT-BR) | Entidade Técnica (EN) | Atributos Principais |
+| Termo (PT-BR) | Entidade (EN) | Observação |
 | :--- | :--- | :--- |
 | **Grupo** | `group` | `id`, `name`, `admin_token`, `invite_token`, `price_limit`, `reveal_date`, `status`, `drawn_at`, `owner_id` |
-| **Organizador** | Identificado pelo `admin_token` ou `owner_id` | Dono ou criador do grupo, gerencia via link de admin |
-| **Participante** | `participant` | `id`, `group_id`, `name`, `personal_token`, `drawn_participant_id`, `revealed_at` |
-| **Sorteio** | Campo `drawn_at` / `status` | Registro distribuído nas entidades (atualizado atomicamente via Edge Function) |
-| **Par** | `participant.drawn_participant_id` | FK de linkagem para outro participante do grupo |
-| **Link de Convite** | `group.invite_token` | Token gerado no servidor (`DEFAULT gen_random_uuid()`) ao criar o grupo |
-| **Link Individual** | `participant.personal_token` | Token gerado ao entrar no grupo (atualmente no cliente; migração para RPC `join_group` planejada) |
-| **Link de Admin** | `group.admin_token` | Token gerado no servidor (`DEFAULT gen_random_uuid()`) ao criar o grupo |
+| **Organizador** | `admin_token` / `owner_id` | Gerencia pelo link de admin; logado, vê o grupo no dashboard e pode remover participantes |
+| **Participante** | `participant` | `id`, `group_id`, `name`, `personal_token`, `drawn_participant_id`, `revealed_at`, `claimed_at` |
+| **Sorteio** | `drawn_at` / `status` | Distribuição (derangement) feita **atomicamente** na Edge Function `perform-draw` |
+| **Par** | `participant.drawn_participant_id` | FK para outro participante (nunca exposto cru ao cliente) |
+| **Link de Admin** | `group.admin_token` | "Senha" do organizador, gerada no servidor |
+| **Link de Convite** | `group.invite_token` | Abre a página informativa de convite (orienta a usar o link individual) |
+| **Link Individual** | `participant.personal_token` | Link privado de revelação `/revelar/<token>`. O organizador obtém os links via RPC `get_participant_links` e distribui um a cada pessoa |
 
----
+> **Modelo de acesso do participante:** cada pessoa acessa o seu par pelo **link individual** (`/revelar/<personal_token>`), que é um segredo único — ninguém vê o par de outro, e funciona antes/depois do sorteio. (Um modelo anterior de "senha do grupo + reivindicar nome" foi descartado por permitir um membro ver o par de outro — ver migration 013.)
 
 ### 📊 3.2. Diagrama ER (Mermaid)
 
@@ -52,28 +53,27 @@ erDiagram
     groups {
         uuid id PK
         text name
-        text admin_token "valor UUID v4, DEFAULT gen_random_uuid()"
-        text invite_token "valor UUID v4, DEFAULT gen_random_uuid()"
+        text admin_token "DEFAULT gen_random_uuid()"
+        text invite_token "DEFAULT gen_random_uuid()"
         numeric price_limit "nullable"
         timestamptz reveal_date "nullable"
         text status "open, drawn, archived"
         timestamptz drawn_at "nullable"
         timestamptz created_at
         timestamptz updated_at
-        uuid owner_id "nullable FK to auth.users"
+        uuid owner_id "nullable, relação lógica com auth.users"
     }
-
     participants {
         uuid id PK
         uuid group_id FK
         text name
-        text personal_token "valor UUID v4"
+        text personal_token
         uuid drawn_participant_id FK "nullable"
         timestamptz revealed_at "nullable"
+        timestamptz claimed_at "nullable (legado)"
         timestamptz created_at
-        uuid owner_id "nullable FK to auth.users"
+        uuid owner_id "nullable"
     }
-
     groups ||--o{ participants : "tem muitos"
     participants }o--o| participants : "foi sorteado para"
 ```
@@ -82,7 +82,7 @@ erDiagram
 
 ## 📑 4. Contratos Globais (Interfaces & Types)
 
-> Tipagem TypeScript baseada no schema do banco de dados em `apps/web/src/app/core/models/index.ts`.
+> `apps/web/src/app/core/models/index.ts`.
 
 ```typescript
 export type GroupStatus = 'open' | 'drawn' | 'archived';
@@ -99,6 +99,7 @@ export interface Group {
   created_at: string;
   updated_at: string;
   owner_id: string | null;
+  join_password_hash?: string | null; // coluna legada (modelo de senha descartado)
 }
 
 export type CreateGroupPayload = {
@@ -108,10 +109,10 @@ export type CreateGroupPayload = {
   owner_id?: string | null;
 };
 
+// Visão pública do grupo (sem admin_token). has_join_password é informativo.
 export type GroupPublicView = Pick<
-  Group,
-  'id' | 'name' | 'price_limit' | 'reveal_date' | 'status' | 'drawn_at'
->;
+  Group, 'id' | 'name' | 'price_limit' | 'reveal_date' | 'status' | 'drawn_at'
+> & { has_join_password?: boolean };
 
 export interface Participant {
   id: string;
@@ -122,243 +123,170 @@ export interface Participant {
   revealed_at: string | null;
   created_at: string;
   owner_id: string | null;
+  claimed_at: string | null;
 }
 
-export type JoinGroupPayload = {
-  group_id: string;
-  name: string;
-};
+// Visão pública (sem personal_token nem drawn_participant_id)
+export type ParticipantPublicView = Pick<
+  Participant, 'id' | 'name' | 'created_at' | 'claimed_at' | 'revealed_at'
+>;
 
-export type ParticipantPublicView = Pick<Participant, 'id' | 'name' | 'created_at'>;
+// Link individual de revelação — retornado SÓ ao admin (RPC get_participant_links)
+export interface ParticipantLink {
+  id: string; name: string; personal_token: string; revealed_at: string | null;
+}
 
 export interface MyDrawResult {
-  participant: { id: string; name: string };
+  participant: { id: string; name: string; revealed_at?: string | null };
   group: GroupPublicView;
   drawn: { id: string; name: string } | null;
 }
 
-export interface AdminTokenContext {
-  groupId: string;
-  adminToken: string;
-}
-
-export interface ParticipantTokenContext {
-  groupId: string;
-  personalToken: string;
-}
-
 export interface DrawResponse {
-  drawn_at: string;
-  participant_count: number;
-  group_name: string;
+  drawn_at: string; participant_count: number; group_name: string;
 }
 ```
 
 ---
 
-## 🏗️ 5. Scaffolding Macro (Arquitetura Frontend)
+## 🏗️ 5. Arquitetura Frontend
 
-### 📂 5.1. Estrutura de Pastas de `apps/web`
+### 📂 5.1. Estrutura de Pastas (`apps/web/src/app`)
 
 ```
-apps/web/src/
-└── app/
-    ├── core/
-    │   ├── guards/
-    │   │   ├── admin-token.guard.ts
-    │   │   ├── auth.guard.ts
-    │   │   ├── guest.guard.ts
-    │   │   └── invite-token.guard.ts
-    │   ├── models/
-    │   │   └── index.ts
-    │   ├── services/
-    │   │   ├── api-error.service.ts
-    │   │   ├── auth.service.ts
-    │   │   ├── draw.service.ts
-    │   │   ├── group.service.ts
-    │   │   ├── participant.service.ts
-    │   │   ├── reveal.service.ts
-    │   │   └── supabase-rest.service.ts
-    │   └── tokens/
-    │       └── supabase.tokens.ts
-    ├── features/
-    │   ├── admin/
-    │   │   ├── admin.page.ts
-    │   │   └── admin.page.html
-    │   ├── auth/
-    │   │   ├── login.page.ts
-    │   │   └── register.page.ts
-    │   ├── create-group/
-    │   │   └── create-group.page.ts
-    │   ├── group-closed/
-    │   │   └── group-closed.page.ts
-    │   ├── groups/
-    │   │   └── groups.page.ts
-    │   ├── home/
-    │   │   └── home.page.ts
-    │   ├── join/
-    │   │   └── join.page.ts
-    │   ├── not-found/
-    │   │   └── not-found.page.ts
-    │   └── reveal/
-    │       └── reveal.page.ts
-    ├── shared/
-    │   ├── components/
-    │   │   ├── card/
-    │   │   ├── layout/
-    │   │   └── toast/
-    │   └── pipes/
-    │       └── currency-brl.pipe.ts
-    ├── app.component.ts
-    ├── app.config.ts
-    └── app.routes.ts
+app/
+├── core/
+│   ├── guards/        admin-token · auth · guest · invite-token (Functional Guards)
+│   ├── resolvers/     reveal.resolver (Functional Resolver — pré-carrega o par)
+│   ├── interceptors/  auth.interceptor (token) · error.interceptor (erros)
+│   ├── models/        index.ts
+│   ├── services/      supabase-rest · auth · group · participant · reveal · draw · api-error
+│   └── tokens/        supabase.tokens (SUPABASE_URL / SUPABASE_ANON_KEY via DI)
+├── features/
+│   ├── home/ · auth/(login,register) · create-group/ · groups/(groups.page + groups-shell)
+│   ├── admin/ · join/ · reveal/ · group-closed/ · not-found/
+├── shared/
+│   ├── components/  app-avatar · user-menu · bottom-nav · desktop-header · desktop-sidebar
+│   │               · dashboard-shell · mobile-shell · group-card · group-grid
+│   │               · participant-row · info-badge
+│   ├── layouts/     desktop-layout
+│   └── pipes/       initials.pipe
+├── app.component.ts · app.config.ts · app.routes.ts
 ```
 
----
+### 🚦 5.2. Mapa de Rotas, Guards e Resolver
 
-### 🚦 5.2. Mapa de Rotas e Guards
-
-| Rota | Page Component | Guard | Descrição |
+| Rota | Componente | Proteção | Observação |
 | :--- | :--- | :--- | :--- |
-| `/` | `HomePage` | Público | Landing page, atalhos rápidos |
-| `/login` | `LoginPage` | `guestGuard` | Acesso de organizador recorrente |
-| `/registrar` | `RegisterPage` | `guestGuard` | Cadastro de organizador recorrente |
-| `/criar` | `CreateGroupPage` | Público | Criação rápida de grupo |
-| `/admin/:adminToken` | `AdminPage` | `adminTokenGuard` | Painel do organizador para o grupo |
-| `/entrar/:inviteToken` | `JoinPage` | `inviteTokenGuard` | Tela de join do participante |
-| `/revelar/:personalToken`| `RevealPage` | Público | Revelação do amigo secreto |
-| `/grupos` | `GroupsPage` | `authGuard` | Painel centralizado do organizador logado |
-| `/grupo-encerrado` | `GroupClosedPage` | Público | Aviso de que o sorteio já foi feito |
-| `**` | `NotFoundPage` | Público | Erro 404 customizado |
+| `/` | `HomePage` | `guestGuard` | Landing; logado → redireciona a `/grupos` |
+| `/login` · `/registrar` | `LoginPage` · `RegisterPage` | `guestGuard` | Só deslogado |
+| `/grupos` | `GruposShellComponent` | — | **Rota pai (layout)** com `<router-outlet>` |
+| `/grupos` → `''` | `GroupsPage` | `authGuard` | **Rota filha** — dashboard do organizador |
+| `/grupos/criar` → `'criar'` | `CreateGroupPage` | — (pública) | **Rota filha** — criação (com ou sem conta) |
+| `/admin/:adminToken` | `AdminPage` | `adminTokenGuard` | Painel + links individuais |
+| `/entrar/:inviteToken` | `JoinPage` | `inviteTokenGuard` | Página informativa (usar link individual) |
+| `/revelar/:personalToken` | `RevealPage` | — + **`revealResolver`** | Resolver pré-carrega `get_my_draw` |
+| `/grupo-encerrado` | `GroupClosedPage` | — | Aviso informativo |
+| `**` | `NotFoundPage` | — | 404 |
 
----
+- **Guards (ID19):** `auth.guard` (sessão), `guest.guard` (logado → /grupos), `admin-token.guard` e `invite-token.guard` (validam posse de token).
+- **Resolver (ID19):** `reveal.resolver` (`ResolveFn<MyDrawResult|null>`) entrega os dados via `resolve: { resolvedDraw }`; `RevealPage` os recebe por `input()` (graças a `withComponentInputBinding()`).
+- **Interceptors (ID23):** `auth.interceptor` injeta `apikey` + `Authorization: Bearer`; `error.interceptor` centraliza mensagens (inclui mapeamento dedicado de erros do GoTrue e não vaza erros crus do PostgREST).
 
-### 🧠 5.3. Core Services
+### ⚡ 5.3. `@defer` (ID9 — Deferrable Views)
 
-- **`SupabaseRestService`**: Wrapper genérico sobre a API PostgREST para realizar requisições HTTP autenticadas (via token anônimo ou Bearer JWT).
-- **`AuthService`**: Gerenciador de sessão do usuário no Supabase Auth.
-- **`GroupService`**: Gerencia criação, leitura e alteração de grupos.
-- **`ParticipantService`**: Gerencia participantes vinculados ao grupo.
-- **`RevealService`**: Gerencia a busca do Amigo Secreto via RPC seguro.
-- **`DrawService`**: Dispara a Edge Function `perform-draw` para fazer o sorteio do grupo com segurança de transação atômica.
+`GroupsPage` (desktop) carrega o `GroupGridComponent` sob demanda:
 
----
-
-## ⚡ 6. Edge Functions
-
-### 6.1. Função `perform-draw`
-
-Para eliminar o vazamento de informações e garantir atomicidade completa, o sorteio é realizado no lado do servidor através de uma Supabase Edge Function (`apps/api/supabase/functions/perform-draw/index.ts`).
-
-- **Endpoint:** `POST /functions/v1/perform-draw`
-- **Payload:** `{ "admin_token": "string" }`
-- **Fluxo Técnico:**
-  1. Busca o grupo pelo `admin_token` e verifica se já foi realizado o sorteio.
-  2. Carrega todos os participantes do grupo.
-  3. Executa o algoritmo de *derangement* (embaralhamento garantindo que ninguém se tire).
-  4. Realiza updates atômicos de todos os participantes associando-os aos seus respectivos pares.
-  5. Atualiza o status do grupo para `drawn` e preenche `drawn_at`.
-
----
-
-## 🛡️ 7. Segurança (Supabase RLS & Database Setup)
-
-As seguintes políticas RLS e views garantem que nenhum participante possa ver quem os outros participantes tiraram.
-
-```sql
--- Habilitar RLS nas tabelas
-ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.participants ENABLE ROW LEVEL SECURITY;
-
--- POLÍTICAS: GROUPS
-CREATE POLICY "groups: public insert" ON public.groups FOR INSERT WITH CHECK (true);
-CREATE POLICY "groups: read by invite_token" ON public.groups FOR SELECT USING (true);
-CREATE POLICY "groups: update by owner" ON public.groups FOR UPDATE
-  USING (auth.uid() = owner_id OR owner_id IS NULL)
-  WITH CHECK (auth.uid() = owner_id OR owner_id IS NULL);
-
--- POLÍTICAS: PARTICIPANTS
-CREATE POLICY "participants: read public fields by group" ON public.participants FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.groups g WHERE g.id = group_id));
-
-CREATE POLICY "participants: public insert" ON public.participants FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "participants: delete by group owner" ON public.participants FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.groups g
-      WHERE g.id = group_id
-        AND g.drawn_at IS NULL
-        AND (auth.uid() = g.owner_id OR g.owner_id IS NULL)
-    )
-  );
-
--- VIEW PÚBLICA DE PARTICIPANTES
--- A view roda com privilégios do dono (NÃO é security_invoker) e portanto
--- ignora RLS: é o canal público de leitura e NÃO pode conter colunas
--- sensíveis. Exclui drawn_participant_id E personal_token. (migration 003)
-CREATE OR REPLACE VIEW public.participants_public AS
-  SELECT id, group_id, name, revealed_at, created_at, owner_id
-  FROM public.participants;
-
-GRANT SELECT ON public.participants_public TO anon, authenticated;
-REVOKE SELECT ON public.participants FROM anon, authenticated;
-
--- Como SELECT de participants é revogado, o INSERT de participante usa
--- Prefer: return=minimal (sem RETURNING); o cliente reusa o objeto que
--- construiu localmente.
-
--- VIEW PÚBLICA DE GRUPOS (exclui admin_token) — migration 006
-CREATE OR REPLACE VIEW public.groups_public AS
-  SELECT id, name, invite_token, price_limit, reveal_date, status, drawn_at, created_at, updated_at, owner_id
-  FROM public.groups;
-GRANT SELECT ON public.groups_public TO anon, authenticated;
-
--- TOKENS DE GRUPO GERADOS NO SERVIDOR — migration 007
-ALTER TABLE public.groups
-  ALTER COLUMN admin_token  SET DEFAULT gen_random_uuid(),
-  ALTER COLUMN invite_token SET DEFAULT gen_random_uuid();
-
--- RPC SEGURA PARA BUSCAR O PAR DO PARTICIPANTE (SECURITY DEFINER)
--- IMPORTANTE: é apenas LEITURA (não marca revealed_at). A marcação é feita
--- pela RPC mark_revealed (migration 008), chamada no clique de "Revelar".
-CREATE OR REPLACE FUNCTION public.get_my_draw(p_personal_token text)
-RETURNS json
-LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_participant participants%ROWTYPE;
-  v_drawn       participants%ROWTYPE;
-  v_group       groups%ROWTYPE;
-BEGIN
-  SELECT * INTO v_participant FROM participants WHERE personal_token = p_personal_token;
-  IF NOT FOUND THEN RETURN NULL; END IF;
-
-  SELECT * INTO v_group FROM groups WHERE id = v_participant.group_id;
-
-  IF v_participant.drawn_participant_id IS NULL THEN
-    RETURN json_build_object(
-      'participant', json_build_object('id', v_participant.id, 'name', v_participant.name),
-      'group', json_build_object('id', v_group.id, 'name', v_group.name, 'price_limit', v_group.price_limit, 'reveal_date', v_group.reveal_date, 'status', v_group.status, 'drawn_at', v_group.drawn_at),
-      'drawn', null
-    );
-  END IF;
-
-  SELECT * INTO v_drawn FROM participants WHERE id = v_participant.drawn_participant_id;
-
-  RETURN json_build_object(
-    'participant', json_build_object('id', v_participant.id, 'name', v_participant.name),
-    'group', json_build_object('id', v_group.id, 'name', v_group.name, 'price_limit', v_group.price_limit, 'reveal_date', v_group.reveal_date, 'status', v_group.status, 'drawn_at', v_group.drawn_at),
-    'drawn', json_build_object('id', v_drawn.id, 'name', v_drawn.name)
-  );
-END;
-$$;
-
--- RPC DE LEITURA PURA (lista/contextualiza participação, sem o par) — migration 008
--- e RPC mark_revealed(p_personal_token) que registra revealed_at no clique.
+```html
+@defer (on viewport) { <app-group-grid [groups]="desktopGroups()" /> }
+@placeholder { <skeleton/> } @loading (minimum 200ms) { <spinner/> }
 ```
 
+Resultado: o `GroupGridComponent` é code-split em um **chunk próprio**, baixado só quando entra na viewport. (Importante: o tipo `DesktopGroupCard` é importado como `type` para não manter o módulo eager e permitir o split.)
+
+### 🧠 5.4. Core Services
+
+- **`SupabaseRestService`**: wrapper sobre PostgREST (`select`, `insert` com `return=minimal`, `insertOne` com `return=representation`, `deleteOne`, `rpc`).
+- **`AuthService`**: sessão Supabase Auth; expõe `session`/`user`/`accessToken` como **Signals** (`toSignal`) e `accessToken$` como **Observable** (`toObservable`) — ID25.
+- **`GroupService`**: `createGroup`, `getGroupByAdminToken/InviteToken`, `getPublicGroupByInviteToken`, `getGroupsByOwnerId`, `getParticipantLinks(adminToken)`.
+- **`ParticipantService`**: `getParticipantsByGroupId`, `addParticipant` (insert minimal), `removeParticipant` (RPC).
+- **`RevealService`**: `getMyDraw`, `getMyParticipation`, `markRevealed` (RPCs).
+- **`DrawService`**: dispara a Edge Function `perform-draw`.
+
 ---
 
-_Amigo Secreto ou Inimigo — Documento confidencial para uso interno • v1.0.0 • 2026_
+## 🔐 6. Autenticação, Sessão e Reatividade (ID21 / ID25)
+
+- Login/cadastro via Supabase Auth (`/auth/v1/token` e `/auth/v1/signup`). Sem confirmação de e-mail: o cadastro já retorna a sessão e faz **login automático** com redirecionamento a `/grupos`.
+- A sessão (JWT) é guardada em `localStorage` e exposta por Signals; o `auth.interceptor` envia o `Bearer` em toda chamada ao Supabase.
+- **Ponte RxJS ↔ Signals:** `auth.service.ts` usa `toSignal(this.sessionSubject)` e `toObservable(this.accessToken)`.
+
+---
+
+## ☁️ 7. CRUD e Edge Function (ID22)
+
+- **Create:** `createGroup` (INSERT `groups`), `addParticipant` (INSERT `participants`).
+- **Read:** grupos (`groups`/`groups_public`), participantes (`participants_public`), par (`get_my_draw`).
+- **Update:** `mark_revealed` (grava `revealed_at`); sorteio (`drawn_at`/`status` via Edge Function).
+- **Delete:** `remove_participant` (RPC; só o dono, antes do sorteio).
+
+### Edge Function `perform-draw`
+`POST /functions/v1/perform-draw { admin_token }` — roda com **service_role** (bypassa RLS): busca o grupo, valida, carrega participantes, gera o **derangement** (ninguém tira a si mesmo), grava os pares atomicamente e marca o grupo como `drawn`.
+
+---
+
+## 🛡️ 8. Segurança (RLS, Views e RPCs)
+
+**Princípio:** nenhum participante (nem o organizador) consegue ver o par de outro. Colunas sensíveis (`personal_token`, `drawn_participant_id`) nunca saem por leitura pública — só por RPCs `SECURITY DEFINER` escopadas por token.
+
+- **Views (bypassam RLS, sem colunas sensíveis):**
+  - `participants_public` (id, group_id, name, revealed_at, created_at, owner_id, claimed_at) — migration 003/011.
+  - `groups_public` (sem `admin_token`; + `has_join_password`) — migration 006/011.
+- **RLS:** `groups` (SELECT público; UPDATE/DELETE só dono) e `participants` (INSERT público; SELECT direto revogado) — migration 005.
+- **Grants:** tabelas criadas por migration **não** recebem grants automáticos → grants explícitos para `anon`/`authenticated` (migration 009) e para `service_role` em `groups`/`participants` (migration 012, necessária para a Edge Function).
+- **RPCs `SECURITY DEFINER`:**
+  | RPC | Para quê | Autorização |
+  | :-- | :-- | :-- |
+  | `get_my_draw(personal_token)` | Lê o par + `revealed_at` (leitura pura) | posse do `personal_token` |
+  | `get_my_participation(personal_token)` | Contexto sem o par | posse do `personal_token` |
+  | `mark_revealed(personal_token)` | Grava `revealed_at` (no clique "Revelar") | posse do `personal_token` |
+  | `remove_participant(id)` | Remove participante | dono do grupo (`auth.uid() = owner_id`) e antes do sorteio |
+  | `get_participant_links(admin_token)` | Lista name + personal_token para o admin distribuir | posse do `admin_token` |
+
+### 8.1. Migrations (`apps/api/supabase/migrations`)
+
+| # | Conteúdo |
+| :-- | :-- |
+| 000 | Schema base (`groups`, `participants`) |
+| 001 | Índices nos tokens |
+| 002 | Colunas `status`/`reveal_date`/`updated_at`/`revealed_at` + trigger |
+| 003 | View `participants_public` + revoga SELECT direto + grants INSERT/DELETE |
+| 004 | RPC `get_my_draw` (atualizada na 013 para incluir `revealed_at`) |
+| 005 | Políticas RLS |
+| 006 | View `groups_public` (sem `admin_token`) |
+| 007 | Tokens de grupo `DEFAULT gen_random_uuid()` |
+| 008 | RPCs `get_my_participation` + `mark_revealed` |
+| 009 | Grants de tabela em `groups` (anon/authenticated) |
+| 010 | RPC `remove_participant` (dono, antes do sorteio) |
+| 011 | (descartado) Senha do grupo + claim — substituído pelo modelo de link individual |
+| 012 | Grants de tabela em `groups`/`participants` para `service_role` (corrige o `perform-draw`) |
+| 013 | Remove `claim_participant`/`set_group_password`; `get_my_draw` + `revealed_at`; RPC `get_participant_links` |
+
+---
+
+## 📱 9. PWA e DevOps (ID3 / ID28)
+
+- **PWA:** `@angular/service-worker` com `ngsw-config.json` (prefetch do app-shell + JS/CSS com hash; lazy de ícones/mídia). `provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() })` em `app.config.ts` (ativo só em produção). `manifest.webmanifest` (`display: standalone`, `theme_color`, ícones PNG 192/512/maskable) + metas Apple/`viewport-fit=cover` no `index.html`.
+- **Deploy (ID28):** build de produção `ng build` (gera `ngsw-worker.js`/`ngsw.json`); publicação automatizada da branch principal (ex.: Vercel) servindo `apps/web/dist/amigo-oculto/browser`.
+
+---
+
+## ✅ 10. Testes (ID33 — TDD com IA)
+
+`vitest run` (`npm run test:unit`). Foco em **regras de negócio**:
+- `draw.service.spec.ts`: algoritmo de **derangement** (ninguém se tira, cobre todos exatamente uma vez, mínimo de 3) + chamada da Edge Function.
+- `admin-token.guard.spec.ts`: guard (token válido → `true`; inválido/erro/ausente → `UrlTree '/'`).
+
+---
+
+_Amigo Secreto ou Inimigo — Documento interno • v2.0.0 • 2026_

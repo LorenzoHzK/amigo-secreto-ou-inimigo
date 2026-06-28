@@ -3,6 +3,7 @@ import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
 import { adminTokenGuard } from './core/guards/admin-token.guard';
 import { inviteTokenGuard } from './core/guards/invite-token.guard';
+import { revealResolver } from './core/resolvers/reveal.resolver';
 
 export const routes: Routes = [
   // Página inicial (landing) — pública para anônimos.
@@ -26,14 +27,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register.page').then(m => m.RegisterPage),
   },
 
-  // Criar grupo — público (sem auth, qualquer pessoa pode criar).
-  // Sob o prefixo /grupos para deixar espaço a futuros "criar" de outros escopos.
-  {
-    path: 'grupos/criar',
-    loadComponent: () =>
-      import('./features/create-group/create-group.page').then(m => m.CreateGroupPage),
-  },
-
   // Painel do organizador — protegido por adminTokenGuard (não por sessão)
   {
     path: 'admin/:adminToken',
@@ -48,16 +41,30 @@ export const routes: Routes = [
     loadComponent: () => import('./features/join/join.page').then(m => m.JoinPage),
   },
 
-  // Lista de grupos — requer autenticação (visão consolidada cross-device)
+  // Área "/grupos" — rotas filhas sob um layout pai (hierarquia de layout).
+  // O filho '' (lista) exige autenticação; o filho 'criar' é público.
   {
     path: 'grupos',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/groups/groups.page').then(m => m.GroupsPage),
+    loadComponent: () =>
+      import('./features/groups/groups-shell.component').then(m => m.GruposShellComponent),
+    children: [
+      {
+        path: '',
+        canActivate: [authGuard],
+        loadComponent: () => import('./features/groups/groups.page').then(m => m.GroupsPage),
+      },
+      {
+        path: 'criar',
+        loadComponent: () =>
+          import('./features/create-group/create-group.page').then(m => m.CreateGroupPage),
+      },
+    ],
   },
 
-  // Revelação — pública (token é o passaporte)
+  // Revelação — pública (token é o passaporte). Resolver pré-carrega o par.
   {
     path: 'revelar/:personalToken',
+    resolve: { resolvedDraw: revealResolver },
     loadComponent: () => import('./features/reveal/reveal.page').then(m => m.RevealPage),
   },
 

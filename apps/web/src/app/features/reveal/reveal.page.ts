@@ -6,7 +6,6 @@ import {
   inject,
   input,
   signal,
-  resource,
 } from '@angular/core';
 import { CurrencyPipe, DatePipe, UpperCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -369,20 +368,18 @@ export class RevealPage {
   private readonly revealService = inject(RevealService);
   private readonly apiError = inject(ApiErrorService);
 
-  readonly drawResource = resource<MyDrawResult | null, { token: string }>({
-    params: () => ({ token: this.personalToken() }),
-    loader: ({ params }) => this.revealService.getMyDraw(params.token),
-  });
+  // Dados pré-carregados pelo revealResolver e entregues pela rota.
+  // withComponentInputBinding mapeia a chave 'resolvedDraw' do resolve para
+  // este input — a tela já abre com o resultado pronto.
+  readonly resolvedDraw = input<MyDrawResult | null>(null);
 
-  readonly drawResult = computed<MyDrawResult | null>(() => this.drawResource.value() ?? null);
-  readonly isLoading = computed<boolean>(() => this.drawResource.isLoading());
-  readonly error = computed<string | null>(() => {
-    if (this.drawResource.error()) return 'Erro ao carregar os dados. Tente novamente.';
-    if (!this.drawResource.isLoading() && !this.drawResource.value()) {
-      return 'Link de revelação inválido ou expirado.';
-    }
-    return null;
-  });
+  readonly drawResult = computed<MyDrawResult | null>(() => this.resolvedDraw());
+  readonly isLoading = signal(false);
+  readonly error = computed<string | null>(() =>
+    this.drawResult() === null
+      ? 'Link de revelação inválido ou expirado.'
+      : null,
+  );
 
   readonly isRevealed = signal<boolean>(false);
   readonly revealLabel = signal<string>('Revelar Resultado');
