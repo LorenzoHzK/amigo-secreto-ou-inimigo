@@ -9,6 +9,7 @@
   "scripts": {
     "dev:web": "npm run start -w apps/web",
     "dev:api": "npm run dev -w apps/api",
+    "dev:stop": "npm run stop -w apps/api",
     "dev": "concurrently -n \"WEB,API\" -c \"cyan,green\" \"npm run dev:web\" \"npm run dev:api\"",
     "build:web": "npm run build -w apps/web",
     "test:web": "npm run test -w apps/web",
