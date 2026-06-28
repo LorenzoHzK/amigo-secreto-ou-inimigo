@@ -9,7 +9,7 @@
 // pode ser commitada com segurança. NUNCA coloque aqui a service_role/secret.
 export const environment = {
   production: true,
-  supabaseUrl: 'https://YOUR_PROJECT_REF.supabase.co',
-  supabaseAnonKey: 'YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY',
+  supabaseUrl: 'https://myblwfyciqpxmxmbsjbb.supabase.co',
+  supabaseAnonKey: 'sb_publishable_cIdQfE5hzuw-dQcddy4CXw_lT7j_Cry',
   appName: 'Amigo Secreto ou Inimigo',
 };
