@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { ClaimResult, Participant, ParticipantPublicView } from '../models';
+import { Participant, ParticipantPublicView } from '../models';
 import { SupabaseRestService } from './supabase-rest.service';
 
 @Injectable({ providedIn: 'root' })
@@ -39,22 +39,6 @@ export class ParticipantService {
 
     await firstValueFrom(this.supabase.insert(this.table, newParticipant));
     return newParticipant;
-  }
-
-  // Reivindica um nome do roster provando a senha do grupo. Retorna o status
-  // e, em caso de sucesso, o personal_token (entregue direto ao participante).
-  async claimParticipant(
-    inviteToken: string,
-    password: string,
-    participantId: string,
-  ): Promise<ClaimResult> {
-    return firstValueFrom(
-      this.supabase.rpc<ClaimResult>('claim_participant', {
-        p_invite_token: inviteToken,
-        p_password: password,
-        p_participant_id: participantId,
-      }),
-    );
   }
 
   // Remoção via RPC SECURITY DEFINER: um DELETE direto falharia (participants

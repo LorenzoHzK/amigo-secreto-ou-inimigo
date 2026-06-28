@@ -68,18 +68,6 @@ import { AuthService } from '../../core/services/auth.service';
               />
             </label>
 
-            <label class="block">
-              <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">Senha do grupo (opcional)</span>
-              <input
-                type="password"
-                formControlName="joinPassword"
-                autocomplete="off"
-                class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
-                placeholder="Senha para os participantes entrarem"
-              />
-              <span class="mt-2 block text-xs font-medium text-neutral-400">Compartilhe com os participantes. Eles vão precisar dela para entrar pelo link.</span>
-            </label>
-
             <button
               type="submit"
               [disabled]="form.invalid || isSubmitting()"
@@ -144,17 +132,6 @@ import { AuthService } from '../../core/services/auth.service';
               />
             </label>
 
-            <label class="block md:col-span-2">
-              <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">Senha do grupo (opcional)</span>
-              <input
-                type="password"
-                formControlName="joinPassword"
-                autocomplete="off"
-                class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
-                placeholder="Senha para os participantes entrarem"
-              />
-              <span class="mt-2 block text-xs font-medium text-neutral-400">Compartilhe com os participantes. Eles vão precisar dela para entrar pelo link.</span>
-            </label>
           </div>
 
           <button
@@ -185,7 +162,6 @@ export class CreateGroupPage {
     name: ['', [Validators.required, Validators.minLength(3)]],
     priceLimit: [''],
     revealDate: [''],
-    joinPassword: [''],
   });
 
   goBack(): void {
@@ -247,11 +223,6 @@ export class CreateGroupPage {
         reveal_date: revealDate,
         owner_id: userId,
       });
-
-      const joinPassword = this.form.controls.joinPassword.value.trim();
-      if (joinPassword) {
-        await this.groupService.setGroupPassword(group.admin_token, joinPassword);
-      }
 
       const storedAdmin = this.readTokenList('my_admin_tokens');
       if (!storedAdmin.includes(group.admin_token)) {

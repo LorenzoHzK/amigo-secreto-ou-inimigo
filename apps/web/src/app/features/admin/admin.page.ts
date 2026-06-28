@@ -22,7 +22,7 @@ import { DrawService } from '../../core/services/draw.service';
 import { ApiErrorService } from '../../core/services/api-error.service';
 import { AuthService } from '../../core/services/auth.service';
 import { InitialsPipe } from '../../shared/pipes/initials.pipe';
-import { Group, ParticipantPublicView } from '../../core/models';
+import { Group, ParticipantLink } from '../../core/models';
 
 @Component({
   selector: 'app-admin-page',
@@ -119,54 +119,37 @@ import { Group, ParticipantPublicView } from '../../core/models';
           <section
             class="rounded-[2rem] bg-white p-5 shadow-[0_18px_45px_rgba(26,26,46,0.07)]"
           >
-            <h2 class="text-neutral text-xl font-black">
-              Convidar Participantes
-            </h2>
+            <h2 class="text-neutral text-xl font-black">Links individuais</h2>
             <p class="mt-2 text-sm leading-6 font-medium text-neutral-400">
-              Compartilhe o convite seguro com quem fará parte do grupo.
+              Cada participante tem um link privado para ver o seu par. Envie a
+              cada pessoa o link dela — funciona antes e depois do sorteio.
             </p>
-            <label class="mt-5 block">
-              <span class="sr-only">Link de convite</span>
-              <input
-                type="text"
-                readonly
-                [value]="getInviteLink()"
-                class="bg-base-200 w-full rounded-full border border-neutral-100 px-5 py-4 text-sm font-bold text-neutral-500 outline-none"
-              />
-            </label>
-            <button
-              type="button"
-              class="bg-primary shadow-brand hover:bg-primary-700 focus:ring-primary-300 mt-4 min-h-12 w-full rounded-full text-sm font-extrabold text-white transition focus:ring-2 focus:ring-offset-2 focus:outline-none active:scale-[0.98]"
-              (click)="copyInviteLink()"
-            >
-              {{ copyLabel() }}
-            </button>
-          </section>
-
-          <section
-            class="rounded-[2rem] bg-white p-5 shadow-[0_18px_45px_rgba(26,26,46,0.07)]"
-          >
-            <h2 class="text-neutral text-xl font-black">Senha do grupo</h2>
-            <p class="mt-2 text-sm leading-6 font-medium text-neutral-400">
-              {{ hasPassword() ? 'Senha definida. Compartilhe-a com os participantes para entrarem pelo link.' : 'Defina uma senha e compartilhe com os participantes para proteger a entrada.' }}
-            </p>
-            <input
-              type="password"
-              autocomplete="off"
-              [value]="passwordInput()"
-              (input)="onPasswordInput($event)"
-              [placeholder]="hasPassword() ? 'Nova senha (em branco remove)' : 'Defina uma senha'"
-              class="bg-base-200 mt-4 w-full rounded-full border border-neutral-100 px-5 py-4 text-sm font-bold text-neutral outline-none"
-            />
-            <button
-              type="button"
-              class="border-primary-200 text-primary hover:bg-primary-50 focus:ring-primary-300 mt-3 min-h-12 w-full rounded-full border text-sm font-extrabold transition focus:ring-2 focus:outline-none active:scale-[0.98]"
-              (click)="savePassword()"
-            >
-              Salvar senha
-            </button>
-            @if (passwordStatus()) {
-              <p class="text-primary mt-3 text-center text-xs font-bold">{{ passwordStatus() }}</p>
+            @if (participants().length === 0) {
+              <p class="mt-4 text-sm text-neutral-400">
+                Adicione participantes abaixo para gerar os links.
+              </p>
+            } @else {
+              <div class="mt-4 space-y-2">
+                @for (p of participants(); track p.id) {
+                  <div class="bg-base-200 flex items-center gap-2 rounded-[1.25rem] px-4 py-3">
+                    <span class="text-neutral min-w-0 flex-1 truncate text-sm font-extrabold">{{ p.name }}</span>
+                    <button
+                      type="button"
+                      class="text-primary border-primary-200 hover:bg-primary-50 shrink-0 rounded-full border px-4 py-2 text-xs font-extrabold transition active:scale-[0.98]"
+                      (click)="copyLink(p)"
+                    >
+                      {{ copiedToken() === p.personal_token ? 'Copiado ✓' : 'Copiar link' }}
+                    </button>
+                  </div>
+                }
+              </div>
+              <button
+                type="button"
+                class="bg-primary shadow-brand hover:bg-primary-700 focus:ring-primary-300 mt-4 min-h-12 w-full rounded-full text-sm font-extrabold text-white transition focus:ring-2 focus:ring-offset-2 focus:outline-none active:scale-[0.98]"
+                (click)="copyAllLinks()"
+              >
+                {{ copyLabel() }}
+              </button>
             }
           </section>
 
@@ -212,7 +195,7 @@ import { Group, ParticipantPublicView } from '../../core/models';
                   [name]="participant.name"
                   [initials]="participant.name | initials"
                   [showStatus]="true"
-                  [claimed]="participant.claimed_at !== null"
+                  [claimed]="participant.revealed_at !== null"
                   [showRemove]="!isDrawn() && isOwner()"
                   (remove)="deleteParticipant(participant.id, participant.name)"
                 />
@@ -280,54 +263,37 @@ import { Group, ParticipantPublicView } from '../../core/models';
             <article
               class="rounded-[2rem] border border-[#ececf3] bg-white p-8 shadow-[0_18px_45px_rgba(26,26,46,0.06)]"
             >
-              <h2 class="text-neutral text-2xl font-black">
-                Convidar Participantes
-              </h2>
+              <h2 class="text-neutral text-2xl font-black">Links individuais</h2>
               <p class="mt-3 text-sm leading-6 font-medium text-neutral-400">
-                Copie o link seguro e envie para quem fará parte do grupo.
+                Cada participante tem um link privado para ver o seu par. Envie a
+                cada pessoa o link dela — funciona antes e depois do sorteio.
               </p>
-              <div class="mt-6 flex gap-3">
-                <input
-                  type="text"
-                  readonly
-                  [value]="getInviteLink()"
-                  class="flex-1 rounded-full border border-[#ececf3] bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral-500 outline-none"
-                />
+              @if (participants().length === 0) {
+                <p class="mt-4 text-sm text-neutral-400">
+                  Adicione participantes ao lado para gerar os links.
+                </p>
+              } @else {
+                <div class="mt-6 space-y-2">
+                  @for (p of participants(); track p.id) {
+                    <div class="flex items-center gap-3 rounded-full border border-[#ececf3] bg-[#f8f8fb] px-5 py-3">
+                      <span class="text-neutral min-w-0 flex-1 truncate text-sm font-extrabold">{{ p.name }}</span>
+                      <button
+                        type="button"
+                        class="text-primary border-primary-200 hover:bg-primary-50 shrink-0 rounded-full border px-5 py-2 text-xs font-extrabold transition active:scale-[0.98]"
+                        (click)="copyLink(p)"
+                      >
+                        {{ copiedToken() === p.personal_token ? 'Copiado ✓' : 'Copiar link' }}
+                      </button>
+                    </div>
+                  }
+                </div>
                 <button
                   type="button"
-                  class="bg-primary shadow-brand hover:bg-primary-700 focus:ring-primary-300 rounded-full px-7 py-4 text-sm font-extrabold text-white transition focus:ring-2 focus:outline-none active:scale-[0.98]"
-                  (click)="copyInviteLink()"
+                  class="bg-primary shadow-brand hover:bg-primary-700 focus:ring-primary-300 mt-5 w-full rounded-full px-7 py-4 text-sm font-extrabold text-white transition focus:ring-2 focus:outline-none active:scale-[0.98]"
+                  (click)="copyAllLinks()"
                 >
                   {{ copyLabel() }}
                 </button>
-              </div>
-            </article>
-            <article
-              class="rounded-[2rem] border border-[#ececf3] bg-white p-8 shadow-[0_18px_45px_rgba(26,26,46,0.06)]"
-            >
-              <h2 class="text-neutral text-2xl font-black">Senha do grupo</h2>
-              <p class="mt-3 text-sm leading-6 font-medium text-neutral-400">
-                {{ hasPassword() ? 'Senha definida. Compartilhe-a com os participantes para entrarem pelo link.' : 'Defina uma senha e compartilhe com os participantes para proteger a entrada.' }}
-              </p>
-              <div class="mt-6 flex gap-3">
-                <input
-                  type="password"
-                  autocomplete="off"
-                  [value]="passwordInput()"
-                  (input)="onPasswordInput($event)"
-                  [placeholder]="hasPassword() ? 'Nova senha (em branco remove)' : 'Defina uma senha'"
-                  class="flex-1 rounded-full border border-[#ececf3] bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none"
-                />
-                <button
-                  type="button"
-                  class="border-primary-200 text-primary hover:bg-primary-50 focus:ring-primary-300 rounded-full border px-7 py-4 text-sm font-extrabold transition focus:ring-2 focus:outline-none active:scale-[0.98]"
-                  (click)="savePassword()"
-                >
-                  Salvar
-                </button>
-              </div>
-              @if (passwordStatus()) {
-                <p class="text-primary mt-3 text-sm font-bold">{{ passwordStatus() }}</p>
               }
             </article>
             <button
@@ -381,7 +347,7 @@ import { Group, ParticipantPublicView } from '../../core/models';
                   [name]="participant.name"
                   [initials]="participant.name | initials"
                   [showStatus]="true"
-                  [claimed]="participant.claimed_at !== null"
+                  [claimed]="participant.revealed_at !== null"
                   [showRemove]="!isDrawn() && isOwner()"
                   (remove)="deleteParticipant(participant.id, participant.name)"
                 />
@@ -419,28 +385,22 @@ export class AdminPage {
     loader: ({ params }) => this.groupService.getGroupByAdminToken(params.token),
   });
 
-  // Resource dos participantes — reativa ao id do grupo
-  readonly participantsResource = resource<
-    ParticipantPublicView[],
-    { groupId: string | undefined }
-  >({
-    params: () => ({ groupId: this.groupResource.value()?.id }),
-    loader: ({ params }) =>
-      params.groupId
-        ? this.participantService.getParticipantsByGroupId(params.groupId)
-        : Promise.resolve([]),
+  // Resource dos participantes com os links individuais — reativa ao admin_token.
+  readonly linksResource = resource<ParticipantLink[], { token: string }>({
+    params: () => ({ token: this.adminToken() }),
+    loader: ({ params }) => this.groupService.getParticipantLinks(params.token),
   });
 
   // Aliases para o template
   readonly group = computed<Group | null>(() => this.groupResource.value() ?? null);
-  readonly participants = computed<ParticipantPublicView[]>(
-    () => this.participantsResource.value() ?? [],
+  readonly participants = computed<ParticipantLink[]>(
+    () => this.linksResource.value() ?? [],
   );
   readonly isLoading = computed(
-    () => this.groupResource.isLoading() || this.participantsResource.isLoading(),
+    () => this.groupResource.isLoading() || this.linksResource.isLoading(),
   );
   readonly error = computed(() => {
-    if (this.groupResource.error() || this.participantsResource.error()) {
+    if (this.groupResource.error() || this.linksResource.error()) {
       return 'Falha ao carregar dados do grupo.';
     }
     if (!this.groupResource.isLoading() && this.groupResource.value() === null) {
@@ -459,12 +419,9 @@ export class AdminPage {
     return !!ownerId && this.auth.user()?.id === ownerId;
   });
 
-  readonly copyLabel = signal<string>('Copiar Link');
+  readonly copyLabel = signal<string>('Copiar todos os links');
   readonly drawLabel = signal<string>('🎉 Sortear Nomes');
-
-  readonly passwordInput = signal<string>('');
-  readonly passwordStatus = signal<string>('');
-  readonly hasPassword = computed(() => !!this.group()?.join_password_hash);
+  readonly copiedToken = signal<string | null>(null);
 
   readonly priceLimitLabel = computed(() => {
     const priceLimit = this.group()?.price_limit;
@@ -498,18 +455,25 @@ export class AdminPage {
     });
   }
 
-  getInviteLink(): string {
-    const g = this.group();
-    if (!g) return '';
-    return `${window.location.origin}/entrar/${g.invite_token}`;
+  revealLink(token: string): string {
+    return `${window.location.origin}/revelar/${token}`;
   }
 
-  copyInviteLink(): void {
-    const link = this.getInviteLink();
-    if (!link) return;
-    navigator.clipboard.writeText(link).then(() => {
-      this.copyLabel.set('Link copiado ✓');
-      setTimeout(() => this.copyLabel.set('Copiar Link'), 1800);
+  copyLink(p: ParticipantLink): void {
+    navigator.clipboard.writeText(this.revealLink(p.personal_token)).then(() => {
+      this.copiedToken.set(p.personal_token);
+      setTimeout(() => this.copiedToken.set(null), 1800);
+    });
+  }
+
+  copyAllLinks(): void {
+    const text = this.participants()
+      .map((p) => `${p.name}: ${this.revealLink(p.personal_token)}`)
+      .join('\n');
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      this.copyLabel.set('Todos copiados ✓');
+      setTimeout(() => this.copyLabel.set('Copiar todos os links'), 1800);
     });
   }
 
@@ -529,28 +493,10 @@ export class AdminPage {
 
     try {
       await this.participantService.addParticipant(g.id, trimmed);
-      this.participantsResource.reload();
+      this.linksResource.reload();
     } catch (err) {
       console.error(err);
       this.apiError.report('Erro ao adicionar participante. Tente novamente.');
-    }
-  }
-
-  onPasswordInput(event: Event): void {
-    this.passwordInput.set((event.target as HTMLInputElement).value);
-  }
-
-  async savePassword(): Promise<void> {
-    const value = this.passwordInput().trim();
-    try {
-      await this.groupService.setGroupPassword(this.adminToken(), value);
-      this.passwordStatus.set(value ? 'Senha salva ✓' : 'Senha removida ✓');
-      this.passwordInput.set('');
-      this.groupResource.reload();
-      setTimeout(() => this.passwordStatus.set(''), 2500);
-    } catch (err) {
-      console.error(err);
-      this.apiError.report('Erro ao salvar a senha. Tente novamente.');
     }
   }
 
@@ -571,7 +517,7 @@ export class AdminPage {
           'Não foi possível remover. Apenas o organizador (logado) pode remover, e somente antes do sorteio.',
         );
       }
-      this.participantsResource.reload();
+      this.linksResource.reload();
     } catch (err) {
       console.error(err);
       this.apiError.report('Erro ao remover participante. Tente novamente.');
@@ -587,7 +533,7 @@ export class AdminPage {
       await this.drawService.draw(this.adminToken());
       this.drawLabel.set('Sorteio realizado ✓');
       this.groupResource.reload();
-      this.participantsResource.reload();
+      this.linksResource.reload();
     } catch (err) {
       console.error(err);
       const msg =

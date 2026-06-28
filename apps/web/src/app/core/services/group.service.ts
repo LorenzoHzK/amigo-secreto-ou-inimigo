@@ -1,6 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { Group, CreateGroupPayload, GroupPublicView } from '../models';
+import {
+  Group,
+  CreateGroupPayload,
+  GroupPublicView,
+  ParticipantLink,
+} from '../models';
 import { SupabaseRestService } from './supabase-rest.service';
 
 @Injectable({ providedIn: 'root' })
@@ -36,16 +41,12 @@ export class GroupService {
     );
   }
 
-  // Define/altera/limpa a senha do grupo (autorizado pelo admin_token).
-  // Senha vazia remove a proteção. Retorna true se o grupo foi encontrado.
-  async setGroupPassword(
-    adminToken: string,
-    password: string,
-  ): Promise<boolean> {
+  // Links individuais de revelação (name + personal_token), autorizado pela
+  // posse do admin_token. O admin distribui /revelar/<personal_token> a cada um.
+  async getParticipantLinks(adminToken: string): Promise<ParticipantLink[]> {
     return firstValueFrom(
-      this.supabase.rpc<boolean>('set_group_password', {
+      this.supabase.rpc<ParticipantLink[]>('get_participant_links', {
         p_admin_token: adminToken,
-        p_password: password,
       }),
     );
   }

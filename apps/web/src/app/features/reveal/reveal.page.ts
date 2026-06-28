@@ -408,6 +408,33 @@ export class RevealPage {
     return `Revelação liberada em ${days} dia${days !== 1 ? 's' : ''}`;
   });
 
+  constructor() {
+    effect(() => {
+      const result = this.drawResult();
+      // Persiste o estado revelado: se já houve revelação (revealed_at gravado),
+      // reabrir o link / dar F5 mantém o par visível.
+      if (result?.participant?.revealed_at) {
+        this.isRevealed.set(true);
+      }
+      // Guarda o token localmente para o atalho "Revelar" do menu inferior
+      // funcionar para quem chega direto pelo link individual.
+      const token = this.personalToken();
+      if (result && token) {
+        try {
+          const stored = JSON.parse(
+            localStorage.getItem('my_personal_tokens') ?? '[]',
+          ) as string[];
+          if (!stored.includes(token)) {
+            stored.push(token);
+            localStorage.setItem('my_personal_tokens', JSON.stringify(stored));
+          }
+        } catch {
+          /* localStorage indisponível — ignorar */
+        }
+      }
+    });
+  }
+
   reveal(): void {
     if (!this.canReveal()) return;
     this.isRevealed.set(true);

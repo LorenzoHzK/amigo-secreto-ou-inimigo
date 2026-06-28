@@ -34,7 +34,7 @@ import { AppAvatarComponent } from '../app-avatar/app-avatar.component';
               : 'bg-neutral-50 text-neutral-400'
           "
         >
-          {{ claimed() ? 'Entrou' : 'Pendente' }}
+          {{ claimed() ? 'Revelou' : 'Pendente' }}
         </span>
       }
       @if (showRemove()) {

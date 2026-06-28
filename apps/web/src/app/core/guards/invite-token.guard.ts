@@ -13,17 +13,11 @@ export const inviteTokenGuard: CanActivateFn = (route) => {
     return router.createUrlTree(['/']);
   }
 
+  // Valida apenas a existência do convite. A página de convite é informativa
+  // (orienta a usar o link individual) e funciona antes e depois do sorteio —
+  // por isso não bloqueamos mais grupos já sorteados aqui.
   return from(groupService.getGroupByInviteToken(token)).pipe(
-    map((group) => {
-      if (!group) {
-        return router.createUrlTree(['/']);
-      }
-      if (group.status === 'drawn' || group.drawn_at !== null) {
-        // Redirecionar para página informativa de grupo encerrado
-        return router.createUrlTree(['/grupo-encerrado']);
-      }
-      return true;
-    }),
+    map((group) => (group ? true : router.createUrlTree(['/']))),
     catchError(() => of(router.createUrlTree(['/']))),
   );
 };

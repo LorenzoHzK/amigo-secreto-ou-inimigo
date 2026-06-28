@@ -53,27 +53,25 @@ export type JoinGroupPayload = {
 };
 
 // Visão pública de participante (sem drawn_participant_id nem personal_token).
-// claimed_at indica se a pessoa já reivindicou o seu lugar pelo link.
 export type ParticipantPublicView = Pick<
   Participant,
-  'id' | 'name' | 'created_at' | 'claimed_at'
+  'id' | 'name' | 'created_at' | 'claimed_at' | 'revealed_at'
 >;
 
-// Resultado da RPC claim_participant
-export interface ClaimResult {
-  status:
-    | 'ok'
-    | 'wrong_password'
-    | 'already_claimed'
-    | 'not_found'
-    | 'group_unavailable';
-  personal_token?: string;
+// Link individual de revelação (apenas para o admin distribuir).
+// Inclui o personal_token — retornado só pela RPC get_participant_links,
+// autorizada pela posse do admin_token.
+export interface ParticipantLink {
+  id: string;
+  name: string;
+  personal_token: string;
+  revealed_at: string | null;
 }
 
 // ===== RESULTADO DA RPC get_my_draw =====
 
 export interface MyDrawResult {
-  participant: { id: string; name: string };
+  participant: { id: string; name: string; revealed_at?: string | null };
   group: GroupPublicView;
   drawn: { id: string; name: string } | null;
 }
