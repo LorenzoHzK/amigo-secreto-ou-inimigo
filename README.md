@@ -1,9 +1,8 @@
 # 🎁 Amigo Secreto ou Inimigo
 
-**Status do Sistema:**
-[![CI](https://github.com/utfpr-gp/amigo-oculto/actions/workflows/ci.yml/badge.svg)](https://github.com/utfpr-gp/amigo-oculto/actions/workflows/ci.yml)
+🔗 **Aplicação em Produção (PWA):** <https://amigo-secreto-ou-inimigo-hn0cdrsac-lorenzohzks-projects.vercel.app>
 
-🔗 **Link em Produção:** [Aguardando Deploy na Nuvem]
+> Abra no navegador e use **Instalar** (Chrome/desktop) ou **Adicionar à Tela de Início** (mobile) para instalar como app.
 
 👨‍💻 **Autores:** Matheus Lorenzo e Eduardo — UTFPR Campus Guarapuava
 
@@ -11,7 +10,7 @@
 
 ## 1. Visão Geral
 
-Sistema de sorteio de amigo secreto online. Participantes criam grupos, convidam outros via link, realizam o sorteio e revelam seus pares de forma segura. O organizador gerencia o grupo via token de admin; cada participante acessa sua revelação via token pessoal — sem necessidade de conta.
+Sistema de sorteio de amigo secreto online, instalável como **PWA**. O organizador cria o grupo (gerenciado por um token de admin), adiciona os participantes e distribui a cada um o seu **link individual** de revelação. O sorteio roda no servidor (Edge Function, algoritmo de _derangement_) e cada pessoa vê apenas o seu par — de forma segura e sem necessidade de conta. Cada link individual é um segredo único, então nem o organizador vê o par de outro participante.
 
 ## 2. Documentação Oficial
 
@@ -33,6 +32,8 @@ Toda a especificação está versionada em `/docs`:
 | **Edge Functions** | Deno (TypeScript) |
 | **Monorepo** | NPM Workspaces |
 | **Linguagem** | TypeScript (frontend e Edge Functions) |
+| **Testes** | Vitest (unitários, regras de negócio) |
+| **Deploy** | Vercel (build `npm run build:web`, deploy contínuo na branch `main`) |
 | **Linting/Format** | ESLint (Flat Config) + Prettier |
 
 ## 4. Estrutura do Monorepo
@@ -232,7 +233,7 @@ O projeto utiliza variáveis de ambiente e arquivos de configuração local para
    ```
 2. **Preencher Credenciais:** Preencha o arquivo `.env` com a URL e chaves anônimas do seu painel Supabase.
 3. **Desenvolvimento Local:** Coloque os valores correspondentes em `apps/web/src/environments/environment.development.ts` para que o Angular dev server consiga se comunicar com o Supabase local ou cloud.
-4. **Produção / Deploy:** Configure as variáveis de ambiente (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `APP_NAME`) no painel de controle do seu host de deploy (Vercel, Netlify, etc.).
+4. **Produção / Deploy:** o build de produção embute `apps/web/src/environments/environment.ts`. Preencha-o com a **Project URL** e a chave **anon/publishable** do seu projeto Supabase cloud. A chave anon é pública (vai no frontend), então pode ser commitada — **nunca** use a `service_role`/secret aqui. O deploy na Vercel é definido por `vercel.json` (build `npm run build:web`) e publica automaticamente a cada push na `main`.
 
 > As Edge Functions (`apps/api`) recebem `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` automaticamente do ambiente Supabase — não requer configuração manual.
 
@@ -253,6 +254,11 @@ As migrations ficam em `apps/api/supabase/migrations/` e são aplicadas em ordem
 | `006_create_groups_public_view.sql` | View `groups_public` (sem `admin_token`) |
 | `007_server_side_group_tokens.sql` | `DEFAULT gen_random_uuid()` em `admin_token`/`invite_token` |
 | `008_split_reveal_rpcs.sql` | RPCs `get_my_participation` e `mark_revealed` |
+| `009_grant_groups_privileges.sql` | Grants de tabela em `groups` para `anon`/`authenticated` |
+| `010_remove_participant_rpc.sql` | RPC `remove_participant` (só o dono, antes do sorteio) |
+| `011_group_password_and_claim.sql` | (descartado) Senha do grupo + claim — superado pela `013` |
+| `012_grant_service_role_privileges.sql` | Grants em `groups`/`participants` para `service_role` (necessário ao `perform-draw`) |
+| `013_per_person_links.sql` | Remove claim/senha; `get_my_draw` + `revealed_at`; RPC `get_participant_links` (links individuais) |
 
 Para detalhes e setup do banco, ver [apps/api/README.md](./apps/api/README.md).
 
