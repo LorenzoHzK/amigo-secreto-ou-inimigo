@@ -135,6 +135,7 @@ curl -i --location --request POST 'https://SEU_PROJECT_REF.supabase.co/functions
 
 | Arquivo | Descrição |
 |---------|-----------|
+| `000_init_schema.sql` | Schema base: tabelas `groups` e `participants` |
 | `001_add_indexes.sql` | Índices de performance nos tokens |
 | `002_add_columns.sql` | Colunas `status`, `reveal_date`, `updated_at`, `revealed_at` (trigger idempotente) |
 | `003_create_participants_view.sql` | View `participants_public` (sem `drawn_participant_id` nem `personal_token`) |

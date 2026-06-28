@@ -123,7 +123,7 @@ import { Group, ParticipantPublicView } from '../../core/models';
               Convidar Participantes
             </h2>
             <p class="mt-2 text-sm leading-6 font-medium text-neutral-400">
-              Compartilhe o convite seguro com quem fará parte da troca.
+              Compartilhe o convite seguro com quem fará parte do grupo.
             </p>
             <label class="mt-5 block">
               <span class="sr-only">Link de convite</span>
@@ -184,7 +184,7 @@ import { Group, ParticipantPublicView } from '../../core/models';
                 <app-participant-row
                   [name]="participant.name"
                   [initials]="participant.name | initials"
-                  [showRemove]="!isDrawn()"
+                  [showRemove]="!isDrawn() && isOwner()"
                   (remove)="deleteParticipant(participant.id, participant.name)"
                 />
               } @empty {
@@ -255,7 +255,7 @@ import { Group, ParticipantPublicView } from '../../core/models';
                 Convidar Participantes
               </h2>
               <p class="mt-3 text-sm leading-6 font-medium text-neutral-400">
-                Copie o link seguro e envie para quem fará parte da troca.
+                Copie o link seguro e envie para quem fará parte do grupo.
               </p>
               <div class="mt-6 flex gap-3">
                 <input
@@ -323,7 +323,7 @@ import { Group, ParticipantPublicView } from '../../core/models';
                 <app-participant-row
                   [name]="participant.name"
                   [initials]="participant.name | initials"
-                  [showRemove]="!isDrawn()"
+                  [showRemove]="!isDrawn() && isOwner()"
                   (remove)="deleteParticipant(participant.id, participant.name)"
                 />
               } @empty {
@@ -391,6 +391,14 @@ export class AdminPage {
   });
 
   readonly isDrawn = computed(() => this.group()?.drawn_at !== null);
+
+  // Só o dono autenticado do grupo pode remover participantes (a RPC
+  // remove_participant exige auth.uid() = owner_id). Logo, o botão de
+  // excluir só deve aparecer para ele.
+  readonly isOwner = computed(() => {
+    const ownerId = this.group()?.owner_id;
+    return !!ownerId && this.auth.user()?.id === ownerId;
+  });
 
   readonly copyLabel = signal<string>('Copiar Link');
   readonly drawLabel = signal<string>('🎉 Sortear Nomes');
@@ -466,7 +474,7 @@ export class AdminPage {
   }
 
   async deleteParticipant(id: string, name: string): Promise<void> {
-    if (this.isDrawn()) {
+    if (this.isDrawn() || !this.isOwner()) {
       return;
     }
 
@@ -476,7 +484,12 @@ export class AdminPage {
     if (!confirmed) return;
 
     try {
-      await this.participantService.removeParticipant(id);
+      const removed = await this.participantService.removeParticipant(id);
+      if (!removed) {
+        this.apiError.report(
+          'Não foi possível remover. Apenas o organizador (logado) pode remover, e somente antes do sorteio.',
+        );
+      }
       this.participantsResource.reload();
     } catch (err) {
       console.error(err);

@@ -1,5 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { AppAvatarComponent } from '../app-avatar/app-avatar.component';
+import { AuthService } from '../../../core/services/auth.service';
 
 interface DesktopSidebarItem {
   label: string;
@@ -11,16 +18,16 @@ interface DesktopSidebarItem {
 @Component({
   selector: 'app-desktop-sidebar',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, AppAvatarComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <aside
       class="fixed top-0 left-0 hidden h-dvh w-[292px] border-r border-[#ececf3] bg-white px-6 py-7 shadow-[14px_0_45px_rgba(26,26,46,0.035)] lg:block"
     >
       <a
-        routerLink="/"
+        [routerLink]="auth.isAuthenticated() ? '/grupos' : '/'"
         class="focus:ring-primary-300 flex items-center gap-3 rounded-full focus:ring-2 focus:outline-none"
-        aria-label="Ir para home"
+        [attr.aria-label]="auth.isAuthenticated() ? 'Ir para meus grupos' : 'Ir para home'"
       >
         <span
           class="bg-primary shadow-brand grid size-11 place-items-center rounded-full text-xl text-white"
@@ -53,34 +60,54 @@ interface DesktopSidebarItem {
         }
       </nav>
 
-      <div
-        class="bg-neutral absolute inset-x-6 bottom-7 rounded-[1.75rem] p-5 text-white shadow-[0_18px_40px_rgba(26,26,46,0.18)]"
-      >
-        <p class="text-sm font-black">Modo Inimigo</p>
-        <p class="mt-2 text-xs leading-5 text-white/65">
-          Ative desafios criativos para uma troca memorável.
-        </p>
-        <button
-          type="button"
-          class="text-neutral mt-4 rounded-full bg-white px-4 py-2 text-xs font-black transition active:scale-[0.98]"
-          (click)="exploreEnemyMode()"
+      @if (auth.isAuthenticated()) {
+        <div
+          class="absolute inset-x-6 bottom-7 flex items-center gap-3 rounded-2xl border border-[#ececf3] bg-[#f8f8fb] p-3"
         >
-          Explorar
-        </button>
-      </div>
+          <app-avatar [initials]="initials()" sizeClass="size-9 text-[11px]" />
+          <div class="min-w-0 flex-1">
+            <p class="text-neutral truncate text-xs font-bold">{{ email() }}</p>
+            <button
+              type="button"
+              class="text-error text-xs font-extrabold hover:underline focus:outline-none"
+              (click)="logout()"
+            >
+              Sair
+            </button>
+          </div>
+        </div>
+      }
     </aside>
   `,
 })
 export class DesktopSidebarComponent {
+  readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
   readonly items: DesktopSidebarItem[] = [
     { label: 'Meus Grupos', path: '/grupos', icon: '◉', active: true },
-    { label: 'Nova Troca', path: '/criar', icon: '+', active: false },
-    { label: 'Configurações', path: '/grupos', icon: '⚙', active: false },
+    { label: 'Novo Grupo', path: '/grupos/criar', icon: '+', active: false },
   ];
 
-  exploreEnemyMode(): void {
-    void this.router.navigateByUrl('/criar');
+  readonly email = computed(() => this.auth.user()?.email ?? '');
+
+  readonly initials = computed(() => {
+    const user = this.auth.user();
+    const source =
+      (user?.user_metadata?.['display_name'] as string | undefined) ??
+      user?.email ??
+      '';
+    const trimmed = source.trim();
+    if (!trimmed) return 'EU';
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return trimmed.substring(0, 2).toUpperCase();
+  });
+
+  async logout(): Promise<void> {
+    await this.auth.signOut();
+    void this.router.navigateByUrl('/');
   }
 }

@@ -2,13 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
-  computed,
   inject,
   signal,
 } from '@angular/core';
 import { UpperCasePipe } from '@angular/common';
 import { Router } from '@angular/router';
-import { AppAvatarComponent } from '../../shared/components/app-avatar/app-avatar.component';
+import { UserMenuComponent } from '../../shared/components/user-menu/user-menu.component';
 import { BottomNavComponent } from '../../shared/components/bottom-nav/bottom-nav.component';
 import {
   GroupCardAvatar,
@@ -48,7 +47,7 @@ interface GroupMock {
   selector: 'app-groups-page',
   standalone: true,
   imports: [
-    AppAvatarComponent,
+    UserMenuComponent,
     BottomNavComponent,
     GroupCardComponent,
     InfoBadgeComponent,
@@ -76,12 +75,12 @@ interface GroupMock {
             >
           </p>
         </div>
-        <app-avatar [initials]="userInitials()" />
+        <app-user-menu />
       </header>
 
       <main class="flex-1 space-y-5 px-6 pb-8">
         <section>
-          <app-info-badge label="Gerencie suas trocas" />
+          <app-info-badge label="Gerencie seus grupos" />
           <h1 class="text-neutral mt-5 text-[2.85rem] leading-none font-black">
             Meus Grupos
           </h1>
@@ -142,7 +141,7 @@ interface GroupMock {
         <div>
           <span
             class="border-primary-100 bg-primary-50 text-primary inline-flex rounded-full border px-4 py-2 text-xs font-black tracking-[0.16em] uppercase"
-            >{{ 'Gerencie suas trocas' | uppercase }}</span
+            >{{ 'Gerencie seus grupos' | uppercase }}</span
           >
           <h1 class="text-neutral mt-5 text-5xl font-black">Meus Grupos</h1>
           <p class="mt-3 text-base font-medium text-neutral-400">
@@ -154,7 +153,7 @@ interface GroupMock {
           class="bg-primary shadow-brand-lg hover:bg-primary-700 focus:ring-primary-300 rounded-full px-7 py-4 text-base font-extrabold text-white transition focus:ring-2 focus:outline-none active:scale-[0.98]"
           (click)="goToCreate()"
         >
-          Nova Troca
+          Novo Grupo
         </button>
       </header>
 
@@ -195,40 +194,6 @@ interface GroupMock {
         </button>
       </section>
 
-      <section
-        class="bg-neutral mt-10 flex min-h-64 items-center justify-between gap-8 overflow-hidden rounded-[2.5rem] p-10 text-white shadow-[0_24px_70px_rgba(26,26,46,0.16)]"
-      >
-        <div class="max-w-xl">
-          <p
-            class="text-primary-200 text-xs font-black tracking-[0.18em] uppercase"
-          >
-            Modo especial
-          </p>
-          <h2 class="mt-3 text-4xl leading-tight font-black">
-            Amigo Inimigo:<br />A Arte da Trolagem
-          </h2>
-          <p class="mt-4 text-base leading-7 text-white/65">
-            Transforme a troca em um desafio criativo, com regras leves e
-            presentes inesperados.
-          </p>
-        </div>
-        <div class="flex gap-4">
-          <button
-            type="button"
-            class="bg-primary shadow-brand hover:bg-primary-700 focus:ring-primary-300 rounded-full px-7 py-4 text-sm font-extrabold text-white transition focus:ring-2 focus:outline-none active:scale-[0.98]"
-            (click)="activateEnemyMode()"
-          >
-            {{ enemyLabel() }}
-          </button>
-          <button
-            type="button"
-            class="text-neutral hover:bg-primary-50 rounded-full bg-white px-7 py-4 text-sm font-extrabold transition focus:ring-2 focus:ring-white focus:outline-none active:scale-[0.98]"
-            (click)="showRules()"
-          >
-            {{ rulesLabel() }}
-          </button>
-        </div>
-      </section>
     </app-dashboard-shell>
   `,
 })
@@ -240,19 +205,9 @@ export class GroupsPage implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly apiError = inject(ApiErrorService);
 
-  readonly enemyLabel = signal<string>('Descubra Inimigo');
-  readonly rulesLabel = signal<string>('Ver Regras');
-
   readonly groups = signal<GroupMock[]>([]);
   readonly desktopGroups = signal<DesktopGroupCard[]>([]);
   readonly isLoading = signal<boolean>(true);
-
-  readonly userInitials = computed(() => {
-    const user = this.auth.user();
-    if (!user || !user.email) return 'LS';
-    const emailParts = user.email.split('@')[0];
-    return emailParts.substring(0, 2).toUpperCase();
-  });
 
   ngOnInit(): void {
     void this.loadGroups();
@@ -478,15 +433,6 @@ export class GroupsPage implements OnInit {
   }
 
   goToCreate(): void {
-    void this.router.navigateByUrl('/criar');
-  }
-
-  activateEnemyMode(): void {
-    this.enemyLabel.set('Modo ativado ✓');
-  }
-
-  showRules(): void {
-    this.rulesLabel.set('Sem presentes óbvios ✓');
-    setTimeout(() => this.rulesLabel.set('Ver Regras'), 2200);
+    void this.router.navigateByUrl('/grupos/criar');
   }
 }

@@ -4,22 +4,82 @@ import { catchError, throwError } from 'rxjs';
 import { ApiErrorService } from '../services/api-error.service';
 import { AuthService } from '../services/auth.service';
 
-function getFriendlyMessage(error: HttpErrorResponse): string {
-  const body: unknown = error.error;
+interface ErrorBody {
+  message?: unknown; // PostgREST
+  error?: unknown; // Edge Functions
+  msg?: unknown; // GoTrue
+  error_description?: unknown; // GoTrue
+  error_code?: unknown; // GoTrue (novo)
+  code?: unknown; // GoTrue/PostgREST
+}
 
-  // Edge Functions retornam { error: "mensagem amigável em pt-BR" }.
+function getAuthMessage(error: HttpErrorResponse, body: ErrorBody): string | null {
+  const code =
+    (typeof body.error_code === 'string' && body.error_code) ||
+    (typeof body.code === 'string' && body.code) ||
+    '';
+  const text =
+    [body.msg, body.error_description, body.message, body.error]
+      .find((v): v is string => typeof v === 'string' && v.trim().length > 0)
+      ?.toLowerCase() ?? '';
+
   if (
-    body &&
-    typeof body === 'object' &&
-    'error' in body &&
-    typeof (body as { error: unknown }).error === 'string' &&
-    (body as { error: string }).error.trim()
+    code === 'user_already_exists' ||
+    code === 'email_exists' ||
+    text.includes('already registered') ||
+    text.includes('already been registered')
   ) {
-    return (body as { error: string }).error;
+    return 'Este e-mail já está cadastrado. Faça login.';
+  }
+  if (
+    code === 'weak_password' ||
+    text.includes('password should be') ||
+    text.includes('weak password')
+  ) {
+    return 'A senha é muito fraca. Use pelo menos 6 caracteres.';
+  }
+  if (
+    code === 'invalid_credentials' ||
+    text.includes('invalid login') ||
+    text.includes('invalid credentials')
+  ) {
+    return 'E-mail ou senha inválidos.';
+  }
+  if (code === 'email_not_confirmed' || text.includes('email not confirmed')) {
+    return 'Confirme seu e-mail antes de entrar.';
+  }
+  if (error.status === 429 || code.includes('rate_limit')) {
+    return 'Muitas tentativas. Aguarde alguns instantes e tente de novo.';
+  }
+  if (error.status === 422) {
+    return 'Este e-mail já está cadastrado. Faça login.';
+  }
+  if (error.status === 400) {
+    return 'E-mail ou senha inválidos.';
+  }
+  return null;
+}
+
+function getFriendlyMessage(error: HttpErrorResponse): string {
+  const body: ErrorBody =
+    error.error && typeof error.error === 'object'
+      ? (error.error as ErrorBody)
+      : {};
+
+  // Erros de autenticação (GoTrue, /auth/v1/*) têm mensagens dedicadas.
+  if (error.url?.includes('/auth/v1/')) {
+    const authMessage = getAuthMessage(error, body);
+    if (authMessage) {
+      return authMessage;
+    }
   }
 
-  if (typeof body === 'string' && body.trim()) {
-    return body;
+  // Edge Functions retornam { error: "mensagem amigável em pt-BR" }.
+  if (typeof body.error === 'string' && body.error.trim()) {
+    return body.error;
+  }
+  if (typeof error.error === 'string' && error.error.trim()) {
+    return error.error;
   }
 
   // Erros do PostgREST ({ message, details, hint, code }) NÃO são expostos

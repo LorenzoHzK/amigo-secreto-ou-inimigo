@@ -5,9 +5,12 @@ import { adminTokenGuard } from './core/guards/admin-token.guard';
 import { inviteTokenGuard } from './core/guards/invite-token.guard';
 
 export const routes: Routes = [
-  // Página inicial — pública
+  // Página inicial (landing) — pública para anônimos.
+  // Usuário autenticado é redirecionado para /grupos (guestGuard);
+  // para rever a landing, basta deslogar.
   {
     path: '',
+    canActivate: [guestGuard],
     loadComponent: () => import('./features/home/home.page').then(m => m.HomePage),
   },
 
@@ -23,9 +26,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register.page').then(m => m.RegisterPage),
   },
 
-  // Criar grupo — público (sem auth, qualquer pessoa pode criar)
+  // Criar grupo — público (sem auth, qualquer pessoa pode criar).
+  // Sob o prefixo /grupos para deixar espaço a futuros "criar" de outros escopos.
   {
-    path: 'criar',
+    path: 'grupos/criar',
     loadComponent: () =>
       import('./features/create-group/create-group.page').then(m => m.CreateGroupPage),
   },

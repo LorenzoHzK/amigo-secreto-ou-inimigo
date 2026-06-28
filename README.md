@@ -81,11 +81,13 @@ npm run dev:api
 Aguardar até aparecer `Started supabase local development setup.` O CLI exibirá as URLs e chaves locais:
 
 ```
-API URL: http://localhost:54321
-Studio URL: http://localhost:54323
-anon key: eyJ...
-service_role key: eyJ...
+Project URL: http://127.0.0.1:54321
+Studio:      http://127.0.0.1:54323
+Publishable: sb_publishable_...   ← usar no frontend
+Secret:      sb_secret_...        ← server-side, nunca no frontend
 ```
+
+> CLI recente usa o **novo formato de chaves**: `Publishable` substitui a antiga `anon key` e `Secret` substitui a `service_role key`. Se a sua versão ainda exibir `anon key`/`service_role key` (JWT `eyJ...`), use a `anon key`.
 
 **Passo 2:** Configurar o frontend com as credenciais locais
 
@@ -94,8 +96,8 @@ Editar `apps/web/src/environments/environment.development.ts`:
 ```typescript
 export const environment = {
   production: false,
-  supabaseUrl: 'http://localhost:54321',   // URL exibida pelo CLI
-  supabaseAnonKey: 'eyJ...',              // anon key exibida pelo CLI
+  supabaseUrl: 'http://127.0.0.1:54321',                  // Project URL do CLI
+  supabaseAnonKey: 'sb_publishable_...',                  // chave Publishable (ou anon key legada)
   appName: 'Amigo Secreto ou Inimigo',
 };
 ```
@@ -242,11 +244,15 @@ As migrations ficam em `apps/api/supabase/migrations/` e são aplicadas em ordem
 
 | Migration | Descrição |
 |-----------|-----------|
+| `000_init_schema.sql` | Schema base: tabelas `groups` e `participants` |
 | `001_add_indexes.sql` | Índices de performance nos tokens |
 | `002_add_columns.sql` | Colunas `status`, `reveal_date`, `updated_at`, `revealed_at` |
-| `003_create_participants_view.sql` | View `participants_public` (sem `drawn_participant_id`) |
-| `004_create_rpc_get_my_draw.sql` | RPC `get_my_draw` para revelação segura |
+| `003_create_participants_view.sql` | View `participants_public` (sem `drawn_participant_id` nem `personal_token`) |
+| `004_create_rpc_get_my_draw.sql` | RPC `get_my_draw` (leitura do par sorteado) |
 | `005_apply_rls.sql` | Row Level Security policies |
+| `006_create_groups_public_view.sql` | View `groups_public` (sem `admin_token`) |
+| `007_server_side_group_tokens.sql` | `DEFAULT gen_random_uuid()` em `admin_token`/`invite_token` |
+| `008_split_reveal_rpcs.sql` | RPCs `get_my_participation` e `mark_revealed` |
 
 Para detalhes e setup do banco, ver [apps/api/README.md](./apps/api/README.md).
 

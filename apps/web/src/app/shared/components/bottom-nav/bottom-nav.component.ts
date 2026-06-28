@@ -106,9 +106,9 @@ export class BottomNavComponent {
     try {
       const tokens = JSON.parse(localStorage.getItem('my_admin_tokens') ?? '[]') as string[];
       const last = tokens[tokens.length - 1];
-      return last ? `/admin/${last}` : '/criar';
+      return last ? `/admin/${last}` : '/grupos/criar';
     } catch {
-      return '/criar';
+      return '/grupos/criar';
     }
   }
 
