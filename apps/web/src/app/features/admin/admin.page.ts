@@ -194,8 +194,6 @@ import { Group, ParticipantLink } from '../../core/models';
                 <app-participant-row
                   [name]="participant.name"
                   [initials]="participant.name | initials"
-                  [showStatus]="true"
-                  [claimed]="participant.revealed_at !== null"
                   [showRemove]="!isDrawn() && isOwner()"
                   (remove)="deleteParticipant(participant.id, participant.name)"
                 />
@@ -346,8 +344,6 @@ import { Group, ParticipantLink } from '../../core/models';
                 <app-participant-row
                   [name]="participant.name"
                   [initials]="participant.name | initials"
-                  [showStatus]="true"
-                  [claimed]="participant.revealed_at !== null"
                   [showRemove]="!isDrawn() && isOwner()"
                   (remove)="deleteParticipant(participant.id, participant.name)"
                 />
