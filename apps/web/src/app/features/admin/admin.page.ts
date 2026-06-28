@@ -135,7 +135,7 @@ import { Group, ParticipantLink } from '../../core/models';
                     <span class="text-neutral min-w-0 flex-1 truncate text-sm font-extrabold">{{ p.name }}</span>
                     <button
                       type="button"
-                      class="text-primary border-primary-200 hover:bg-primary-50 shrink-0 rounded-full border px-4 py-2 text-xs font-extrabold transition active:scale-[0.98]"
+                      class="text-primary border-primary-200 hover:bg-primary-50 shrink-0 rounded-full border px-3 py-2 text-xs font-extrabold whitespace-nowrap transition active:scale-[0.98]"
                       (click)="copyLink(p)"
                     >
                       {{ copiedToken() === p.personal_token ? 'Copiado ✓' : 'Copiar link' }}
