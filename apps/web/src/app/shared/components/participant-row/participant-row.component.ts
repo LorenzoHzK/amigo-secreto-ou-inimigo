@@ -25,6 +25,18 @@ import { AppAvatarComponent } from '../app-avatar/app-avatar.component';
       <p class="text-neutral min-w-0 flex-1 truncate text-sm font-extrabold">
         {{ name() }}
       </p>
+      @if (showStatus()) {
+        <span
+          class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black tracking-wide uppercase"
+          [class]="
+            claimed()
+              ? 'bg-primary-50 text-primary'
+              : 'bg-neutral-50 text-neutral-400'
+          "
+        >
+          {{ claimed() ? 'Entrou' : 'Pendente' }}
+        </span>
+      }
       @if (showRemove()) {
         <button
           type="button"
@@ -55,6 +67,8 @@ export class ParticipantRowComponent {
   name = input.required<string>();
   initials = input.required<string>();
   showRemove = input<boolean>(true);
+  showStatus = input<boolean>(false);
+  claimed = input<boolean>(false);
   readonly remove = output<void>();
   readonly removed = signal<boolean>(false);
 
