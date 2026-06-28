@@ -12,5 +12,11 @@
   },
   "[css]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+  "json.schemas": [
+    {
+      "fileMatch": ["**/mock-api/db.json"],
+      "url": "./node_modules/json-server/schema.json"
+    }
+  ]
 }

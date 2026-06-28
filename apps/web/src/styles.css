@@ -2,6 +2,31 @@
 @plugin 'daisyui';
 @source './app';
 
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(108, 59, 255, 0.08), transparent 34%),
+    radial-gradient(circle at top right, rgba(0, 212, 170, 0.06), transparent 28%),
+    linear-gradient(180deg, #f8f8fb 0%, #ffffff 100%);
+}
+
+body {
+  min-height: 100vh;
+  color: var(--color-neutral);
+  background: transparent;
+}
+
+@layer base {
+  button,
+  [role="button"],
+  .btn,
+  select,
+  input[type="button"],
+  input[type="submit"] {
+    cursor: pointer !important;
+  }
+}
+
 @theme {
   --color-primary: #6c3bff;
   --color-primary-50: #f0eeff;

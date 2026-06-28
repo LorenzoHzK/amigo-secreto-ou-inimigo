@@ -1,0 +1,7 @@
+# Supabase auto-generated
+.branches/
+.temp/
+
+# Environment
+.env
+.env.local

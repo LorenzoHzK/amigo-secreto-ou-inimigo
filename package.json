@@ -8,12 +8,20 @@
     "libs/*"
   ],
   "scripts": {
-    "dev:api": "echo 'Backend não configurado. Rode o Workflow 2.'",
     "dev:web": "npm run start -w apps/web",
+    "dev:api": "npm run dev -w apps/api",
+    "dev:stop": "npm run stop -w apps/api",
+    "dev": "concurrently -n \"WEB,API\" -c \"cyan,green\" \"npm run dev:web\" \"npm run dev:api\"",
     "build:web": "npm run build -w apps/web",
     "test:web": "npm run test -w apps/web",
+    "test:unit": "npm run test:unit -w apps/web",
     "lint:web": "npm run lint -w apps/web",
-    "format": "prettier --write \"**/*.{ts,js,json,css,scss,md}\""
+    "db:push": "npm run db:push -w apps/api",
+    "db:reset": "npm run db:reset -w apps/api",
+    "functions:serve": "npm run functions:serve -w apps/api",
+    "functions:deploy": "npm run functions:deploy -w apps/api",
+    "mock:api": "npm run mock:api -w apps/web",
+    "format": "prettier --write ."
   },
   "keywords": [
     "angular",
@@ -23,9 +31,13 @@
   "author": "Matheus Lorenz e Eduardo",
   "license": "UNLICENSED",
   "devDependencies": {
+    "concurrently": "^9.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0"
+  },
+  "dependencies": {
+    "@angular/service-worker": "^21.2.17"
   }
 }

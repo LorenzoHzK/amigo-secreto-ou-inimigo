@@ -1,0 +1,452 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { UpperCasePipe } from '@angular/common';
+import { Router } from '@angular/router';
+import { UserMenuComponent } from '../../shared/components/user-menu/user-menu.component';
+import { BottomNavComponent } from '../../shared/components/bottom-nav/bottom-nav.component';
+import {
+  GroupCardAvatar,
+  GroupCardComponent,
+} from '../../shared/components/group-card/group-card.component';
+import { InfoBadgeComponent } from '../../shared/components/info-badge/info-badge.component';
+import { MobileShellComponent } from '../../shared/components/mobile-shell/mobile-shell.component';
+import { DashboardShellComponent } from '../../shared/components/dashboard-shell/dashboard-shell.component';
+import {
+  GroupGridComponent,
+  // type-only: importar o tipo como valor manteria o módulo eager e impediria
+  // o @defer de code-split o GroupGridComponent.
+  type DesktopGroupCard,
+} from '../../shared/components/group-grid/group-grid.component';
+import { GroupService } from '../../core/services/group.service';
+import { ParticipantService } from '../../core/services/participant.service';
+import { RevealService } from '../../core/services/reveal.service';
+import { AuthService } from '../../core/services/auth.service';
+import { ApiErrorService } from '../../core/services/api-error.service';
+import {
+  Group,
+  GroupPublicView,
+  ParticipantPublicView,
+} from '../../core/models';
+
+interface GroupMock {
+  type: string;
+  status: string;
+  statusClass: string;
+  title: string;
+  date: string;
+  priceRange: string;
+  actionLabel: string;
+  avatars: GroupCardAvatar[];
+  routeUrl: string;
+}
+
+@Component({
+  selector: 'app-groups-page',
+  standalone: true,
+  imports: [
+    UserMenuComponent,
+    BottomNavComponent,
+    GroupCardComponent,
+    InfoBadgeComponent,
+    MobileShellComponent,
+    DashboardShellComponent,
+    GroupGridComponent,
+    UpperCasePipe,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <app-mobile-shell>
+      <header class="flex items-center justify-between px-6 pt-7 pb-4">
+        <div class="flex items-center gap-3">
+          <div
+            class="bg-primary shadow-brand grid size-11 place-items-center rounded-full text-xl text-white"
+            aria-hidden="true"
+          >
+            🎁
+          </div>
+          <p class="text-neutral text-sm leading-tight font-black">
+            Amigo Secreto
+            <span
+              class="text-primary block text-[11px] font-black tracking-[0.16em] uppercase"
+              >ou Inimigo</span
+            >
+          </p>
+        </div>
+        <app-user-menu />
+      </header>
+
+      <main class="flex-1 space-y-5 px-6 pb-8">
+        <section>
+          <app-info-badge label="Gerencie seus grupos" />
+          <h1 class="text-neutral mt-5 text-[2.85rem] leading-none font-black">
+            Meus Grupos
+          </h1>
+          <p class="mt-4 text-[0.98rem] leading-7 font-medium text-neutral-400">
+            Acompanhe todos os sorteios e listas de presentes em um só lugar.
+          </p>
+        </section>
+
+        @if (isLoading()) {
+          <div
+            class="flex flex-col items-center justify-center py-10 text-neutral-400"
+          >
+            <span
+              class="loading loading-spinner loading-lg text-primary"
+            ></span>
+            <p class="mt-4 text-sm font-bold">Buscando seus grupos...</p>
+          </div>
+        } @else {
+          @for (group of groups(); track group.title) {
+            <app-group-card
+              [type]="group.type"
+              [status]="group.status"
+              [statusClass]="group.statusClass"
+              [title]="group.title"
+              [date]="group.date"
+              [priceRange]="group.priceRange"
+              [actionLabel]="group.actionLabel"
+              [avatars]="group.avatars"
+              [routeUrl]="group.routeUrl"
+            />
+          } @empty {
+            <div
+              class="rounded-[2rem] bg-white p-8 text-center shadow-[0_18px_45px_rgba(26,26,46,0.07)]"
+            >
+              <p class="text-sm font-bold text-neutral-400">
+                Você não participa de nenhum grupo ainda.
+              </p>
+            </div>
+          }
+        }
+
+        <button
+          type="button"
+          class="border-primary-200 text-primary focus:ring-primary-300 flex min-h-36 w-full flex-col items-center justify-center rounded-[2rem] border-2 border-dashed bg-white/60 transition hover:bg-white focus:ring-2 focus:outline-none active:scale-[0.98]"
+          aria-label="Criar novo grupo"
+          (click)="goToCreate()"
+        >
+          <span class="text-4xl leading-none font-light">+</span>
+          <span class="mt-3 text-base font-black">Criar Novo Grupo</span>
+        </button>
+      </main>
+
+      <app-bottom-nav active="groups" />
+    </app-mobile-shell>
+
+    <app-dashboard-shell>
+      <header class="flex items-center justify-between gap-6">
+        <div>
+          <span
+            class="border-primary-100 bg-primary-50 text-primary inline-flex rounded-full border px-4 py-2 text-xs font-black tracking-[0.16em] uppercase"
+            >{{ 'Gerencie seus grupos' | uppercase }}</span
+          >
+          <h1 class="text-neutral mt-5 text-5xl font-black">Meus Grupos</h1>
+          <p class="mt-3 text-base font-medium text-neutral-400">
+            Acompanhe todos os sorteios e listas de presentes em um só lugar.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="bg-primary shadow-brand-lg hover:bg-primary-700 focus:ring-primary-300 rounded-full px-7 py-4 text-base font-extrabold text-white transition focus:ring-2 focus:outline-none active:scale-[0.98]"
+          (click)="goToCreate()"
+        >
+          Novo Grupo
+        </button>
+      </header>
+
+      <section class="mt-10">
+        @if (isLoading()) {
+          <div
+            class="flex flex-col items-center justify-center py-20 text-neutral-400"
+          >
+            <span
+              class="loading loading-spinner loading-lg text-primary"
+            ></span>
+            <p class="mt-4 text-sm font-bold">Buscando seus grupos...</p>
+          </div>
+        } @else {
+          @if (desktopGroups().length > 0) {
+            @defer (on viewport) {
+              <app-group-grid [groups]="desktopGroups()" />
+            } @placeholder {
+              <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                <div class="h-44 animate-pulse rounded-[2rem] bg-white/60"></div>
+                <div class="h-44 animate-pulse rounded-[2rem] bg-white/60"></div>
+                <div class="h-44 animate-pulse rounded-[2rem] bg-white/60"></div>
+              </div>
+            } @loading (minimum 200ms) {
+              <div class="flex justify-center py-10">
+                <span class="loading loading-spinner loading-lg text-primary"></span>
+              </div>
+            }
+          } @else {
+            <div
+              class="rounded-[2rem] bg-white p-12 text-center shadow-[0_18px_45px_rgba(26,26,46,0.07)]"
+            >
+              <p class="text-base font-bold text-neutral-400">
+                Você não participa de nenhum grupo ainda.
+              </p>
+            </div>
+          }
+        }
+
+        <button
+          type="button"
+          class="border-primary-200 text-primary focus:ring-primary-300 mt-6 flex min-h-44 w-full items-center justify-center gap-4 rounded-[2rem] border-2 border-dashed bg-white/70 transition hover:bg-white focus:ring-2 focus:outline-none active:scale-[0.98]"
+          (click)="goToCreate()"
+        >
+          <span
+            class="bg-primary-50 grid size-12 place-items-center rounded-full text-3xl font-light"
+            >+</span
+          >
+          <span class="text-lg font-black">Criar Novo Grupo</span>
+        </button>
+      </section>
+
+    </app-dashboard-shell>
+  `,
+})
+export class GroupsPage implements OnInit {
+  private readonly router = inject(Router);
+  private readonly groupService = inject(GroupService);
+  private readonly participantService = inject(ParticipantService);
+  private readonly revealService = inject(RevealService);
+  private readonly auth = inject(AuthService);
+  private readonly apiError = inject(ApiErrorService);
+
+  readonly groups = signal<GroupMock[]>([]);
+  readonly desktopGroups = signal<DesktopGroupCard[]>([]);
+  readonly isLoading = signal<boolean>(true);
+
+  ngOnInit(): void {
+    void this.loadGroups();
+  }
+
+  async loadGroups(): Promise<void> {
+    this.isLoading.set(true);
+    try {
+      if (this.auth.isAuthenticated() && this.auth.user()?.id) {
+        await this.loadGroupsFromDatabase();
+      } else {
+        await this.loadGroupsFromLocalStorage();
+      }
+    } catch (error) {
+      console.error(error);
+      this.apiError.report('Erro ao carregar grupos. Tente novamente.');
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  private async loadGroupsFromDatabase(): Promise<void> {
+    const userId = this.auth.user()!.id;
+    const groups = await this.groupService.getGroupsByOwnerId(userId);
+    const cards: GroupMock[] = [];
+    const dCards: DesktopGroupCard[] = [];
+
+    for (const group of groups) {
+      const participants =
+        await this.participantService.getParticipantsByGroupId(group.id);
+      const initialsList = participants
+        .slice(0, 3)
+        .map((p) => this.getInitials(p.name));
+      const statusStr = group.drawn_at ? 'Sorteado' : 'Aberto';
+      const statusClass = group.drawn_at
+        ? 'border-accent-100 bg-accent-50 text-accent-800'
+        : 'border-primary-100 bg-primary-50 text-primary-800';
+
+      const priceLimit = group.price_limit;
+      const priceStr = priceLimit
+        ? `Limite: R$ ${priceLimit}`
+        : 'Sem limite de preço';
+
+      cards.push({
+        type: 'Organizador',
+        status: statusStr,
+        statusClass,
+        title: group.name,
+        date: group.drawn_at ? 'Sorteio realizado' : 'Aguardando sorteio',
+        priceRange: priceStr,
+        actionLabel: 'Gerenciar',
+        avatars: initialsList.map((init) => ({ initials: init })),
+        routeUrl: `/admin/${group.admin_token}`,
+      });
+
+      dCards.push({
+        name: group.name,
+        status: statusStr,
+        statusClass: group.drawn_at ? 'bg-accent' : 'bg-primary',
+        participants: `${participants.length} participantes`,
+        value: priceStr,
+        action: 'Gerenciar',
+        avatars: initialsList,
+        actionUrl: `/admin/${group.admin_token}`,
+      });
+    }
+
+    this.groups.set(cards);
+    this.desktopGroups.set(dCards);
+  }
+
+  private async loadGroupsFromLocalStorage(): Promise<void> {
+    let storedAdmin: string[] = [];
+    let storedPersonal: string[] = [];
+    try {
+      storedAdmin = JSON.parse(
+        localStorage.getItem('my_admin_tokens') || '[]',
+      );
+      storedPersonal = JSON.parse(
+        localStorage.getItem('my_personal_tokens') || '[]',
+      );
+    } catch {
+      // Ignorar erro de parsing
+    }
+
+    const cards: GroupMock[] = [];
+    const dCards: DesktopGroupCard[] = [];
+
+    // 1. Carregar grupos onde o usuário é organizador em paralelo
+    const adminGroupsResults = await Promise.all(
+      storedAdmin.map(async (token) => {
+        const group = await this.groupService.getGroupByAdminToken(token);
+        if (!group) return null;
+        const participants =
+          await this.participantService.getParticipantsByGroupId(group.id);
+        return { group, participants };
+      }),
+    );
+
+    // Filtrar os nulos e registrar os IDs para evitar duplicidades
+    const validAdminGroups = adminGroupsResults.filter(
+      (r): r is { group: Group; participants: ParticipantPublicView[] } =>
+        r !== null,
+    );
+    const adminGroupIds = new Set(validAdminGroups.map((r) => r.group.id));
+
+    // 2. Carregar participações em paralelo — via RPC segura get_my_draw,
+    //    que resolve participante + grupo a partir do personal_token sem
+    //    expor o token em nenhuma resposta de SELECT.
+    const personalParticipantsResults = await Promise.all(
+      storedPersonal.map(async (token) => {
+        const participation = await this.revealService.getMyParticipation(token);
+        if (!participation) return null;
+
+        // Se já carregamos este grupo como administrador, não faz sentido buscar grupo/participantes novamente
+        if (adminGroupIds.has(participation.group.id)) return null;
+
+        const participants =
+          await this.participantService.getParticipantsByGroupId(
+            participation.group.id,
+          );
+        return { token, group: participation.group, participants };
+      }),
+    );
+
+    const validPersonalGroups = personalParticipantsResults.filter(
+      (
+        r,
+      ): r is {
+        token: string;
+        group: GroupPublicView;
+        participants: ParticipantPublicView[];
+      } => r !== null,
+    );
+
+    // Processar grupos de organizador
+    for (const { group, participants } of validAdminGroups) {
+      const initialsList = participants
+        .slice(0, 3)
+        .map((p) => this.getInitials(p.name));
+      const statusStr = group.drawn_at ? 'Sorteado' : 'Aberto';
+      const statusClass = group.drawn_at
+        ? 'border-accent-100 bg-accent-50 text-accent-800'
+        : 'border-primary-100 bg-primary-50 text-primary-800';
+
+      const priceLimit = group.price_limit;
+      const priceStr = priceLimit
+        ? `Limite: R$ ${priceLimit}`
+        : 'Sem limite de preço';
+
+      cards.push({
+        type: 'Organizador',
+        status: statusStr,
+        statusClass,
+        title: group.name,
+        date: group.drawn_at ? 'Sorteio realizado' : 'Aguardando sorteio',
+        priceRange: priceStr,
+        actionLabel: 'Gerenciar',
+        avatars: initialsList.map((init) => ({ initials: init })),
+        routeUrl: `/admin/${group.admin_token}`,
+      });
+
+      dCards.push({
+        name: group.name,
+        status: statusStr,
+        statusClass: group.drawn_at ? 'bg-accent' : 'bg-primary',
+        participants: `${participants.length} participantes`,
+        value: priceStr,
+        action: 'Gerenciar',
+        avatars: initialsList,
+        actionUrl: `/admin/${group.admin_token}`,
+      });
+    }
+
+    // Processar grupos de participante
+    for (const { token, group, participants } of validPersonalGroups) {
+      const initialsList = participants
+        .slice(0, 3)
+        .map((pt) => this.getInitials(pt.name));
+      const statusStr = group.drawn_at ? 'Sorteado' : 'Aberto';
+      const statusClass = group.drawn_at
+        ? 'border-accent-100 bg-accent-50 text-accent-800'
+        : 'border-primary-100 bg-primary-50 text-primary-800';
+
+      const priceLimit = group.price_limit;
+      const priceStr = priceLimit
+        ? `Limite: R$ ${priceLimit}`
+        : 'Sem limite de preço';
+
+      cards.push({
+        type: 'Participante',
+        status: statusStr,
+        statusClass,
+        title: group.name,
+        date: group.drawn_at ? 'Sorteio realizado' : 'Aguardando sorteio',
+        priceRange: priceStr,
+        actionLabel: group.drawn_at ? 'Revelar Amigo' : 'Ver Detalhes',
+        avatars: initialsList.map((init) => ({ initials: init })),
+        routeUrl: `/revelar/${token}`,
+      });
+
+      dCards.push({
+        name: group.name,
+        status: statusStr,
+        statusClass: group.drawn_at ? 'bg-accent' : 'bg-primary',
+        participants: `${participants.length} participantes`,
+        value: priceStr,
+        action: group.drawn_at ? 'Revelar' : 'Detalhes',
+        avatars: initialsList,
+        actionUrl: `/revelar/${token}`,
+      });
+    }
+
+    this.groups.set(cards);
+    this.desktopGroups.set(dCards);
+  }
+
+  getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 0 || !parts[0]) return '';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  goToCreate(): void {
+    void this.router.navigateByUrl('/grupos/criar');
+  }
+}

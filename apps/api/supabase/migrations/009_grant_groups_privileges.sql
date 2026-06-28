@@ -1,0 +1,14 @@
+-- Concede privilégios de tabela em groups aos roles anon e authenticated.
+--
+-- Por quê: a tabela groups é criada por migration (000). Diferente das
+-- tabelas criadas pelo dashboard do Supabase, ela NÃO recebe os grants
+-- automáticos para anon/authenticated. Sem o grant, o PostgREST retorna
+-- 403 Forbidden ("permission denied for table groups") já na leitura,
+-- ANTES mesmo de avaliar a RLS.
+--
+-- A segurança por linha continua garantida pelas policies da migration 005
+-- (SELECT liberado; UPDATE/DELETE só para o owner). Estes grants apenas
+-- habilitam o privilégio de tabela exigido antes da RLS.
+--
+-- A migration 003 já tratou os grants de participants; aqui cobrimos groups.
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.groups TO anon, authenticated;

@@ -1,0 +1,251 @@
+import { CommonModule, Location } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+} from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { MobileShellComponent } from '../../shared/components/mobile-shell/mobile-shell.component';
+import { GroupService } from '../../core/services/group.service';
+import { AuthService } from '../../core/services/auth.service';
+
+@Component({
+  selector: 'app-create-group-page',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, MobileShellComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <app-mobile-shell innerClass="bg-base-200">
+      <main class="flex min-h-dvh flex-1 flex-col justify-center px-6 py-8">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="text-neutral active:scale-[0.98] mb-5 inline-flex w-fit items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-extrabold shadow-[0_8px_24px_rgba(26,26,46,0.06)] transition"
+        >
+          ← Voltar
+        </button>
+        <section class="rounded-[2rem] bg-white p-6 shadow-[0_16px_40px_rgba(26,26,46,0.06)]">
+          <p class="text-primary text-xs font-black tracking-[0.18em] uppercase">Novo grupo</p>
+          <h1 class="text-neutral mt-3 text-4xl leading-tight font-black">Criar um novo grupo</h1>
+          <p class="mt-3 text-sm leading-6 font-medium text-neutral-400">Defina o nome e o limite de preço. O Supabase guarda o grupo e os tokens de convite.</p>
+
+          <form class="mt-7 space-y-5" [formGroup]="form" (ngSubmit)="createGroup()">
+            <label class="block">
+              <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">Nome do grupo</span>
+              <input
+                type="text"
+                formControlName="name"
+                class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
+                placeholder="Ex: Natal em Família 2024"
+              />
+              @if (form.controls.name.touched && form.controls.name.invalid) {
+                <p class="mt-2 text-xs font-bold text-error">Informe um nome com pelo menos 3 caracteres.</p>
+              }
+            </label>
+
+            <label class="block">
+              <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">Limite de preço</span>
+              <input
+                type="text"
+                formControlName="priceLimit"
+                inputmode="numeric"
+                (input)="onPriceInput($event)"
+                class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
+                placeholder="R$ 0,00"
+              />            </label>
+
+            <label class="block">
+              <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">
+                Data de revelação (opcional)
+              </span>
+              <input
+                type="date"
+                formControlName="revealDate"
+                [min]="today()"
+                class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
+              />
+            </label>
+
+            <button
+              type="submit"
+              [disabled]="form.invalid || isSubmitting()"
+              class="bg-primary shadow-brand-lg hover:bg-primary-700 mt-2 w-full rounded-full px-8 py-4 text-base font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {{ buttonLabel() }}
+            </button>
+          </form>
+        </section>
+      </main>
+    </app-mobile-shell>
+
+    <div class="text-neutral hidden min-h-dvh bg-[#f8f8fb] font-sans antialiased lg:block">
+      <main class="mx-auto max-w-3xl px-10 py-12">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="text-neutral hover:text-primary hover:bg-primary-50 focus:ring-primary-300 active:scale-[0.98] mb-8 inline-flex items-center gap-2 rounded-full border border-[#ececf3] bg-white px-5 py-2.5 text-sm font-extrabold transition focus:ring-2 focus:outline-none"
+        >
+          ← Voltar
+        </button>
+        <section class="mx-auto flex max-w-2xl items-center justify-center px-6">
+          <form class="w-full rounded-[2rem] border border-[#ececf3] bg-white p-8 shadow-[0_24px_70px_rgba(26,26,46,0.08)]" [formGroup]="form" (ngSubmit)="createGroup()">
+            <p class="text-primary text-xs font-black tracking-[0.18em] uppercase">Novo grupo</p>
+            <h1 class="text-neutral mt-4 text-5xl leading-tight font-black">Criar um novo grupo</h1>
+          <p class="mt-3 max-w-xl text-sm leading-6 font-medium text-neutral-400">Configure o nome, defina o limite e publique o grupo no Supabase.</p>
+
+          <div class="mt-8 grid gap-5 md:grid-cols-2">
+            <label class="block md:col-span-2">
+              <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">Nome do grupo</span>
+              <input
+                type="text"
+                formControlName="name"
+                class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
+                placeholder="Ex: Natal em Família 2024"
+              />
+              @if (form.controls.name.touched && form.controls.name.invalid) {
+                <p class="mt-2 text-xs font-bold text-error">Informe um nome com pelo menos 3 caracteres.</p>
+              }
+            </label>
+
+            <label class="block md:col-span-2">
+              <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">Limite de preço</span>
+              <input
+                type="text"
+                formControlName="priceLimit"
+                inputmode="numeric"
+                (input)="onPriceInput($event)"
+                class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
+                placeholder="R$ 0,00"
+              />            </label>
+
+            <label class="block md:col-span-2">
+              <span class="text-primary text-[11px] font-black tracking-[0.16em] uppercase">
+                Data de revelação (opcional)
+              </span>
+              <input
+                type="date"
+                formControlName="revealDate"
+                [min]="today()"
+                class="border-primary-100 focus:ring-primary-100 mt-3 w-full rounded-full border bg-[#f8f8fb] px-5 py-4 text-sm font-bold text-neutral outline-none focus:ring-2"
+              />
+            </label>
+
+          </div>
+
+          <button
+            type="submit"
+            [disabled]="form.invalid || isSubmitting()"
+            class="bg-primary shadow-brand-lg hover:bg-primary-700 mt-8 w-full rounded-full px-8 py-4 text-base font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {{ buttonLabel() }}
+          </button>
+        </form>
+        </section>
+      </main>
+    </div>
+  `,
+})
+export class CreateGroupPage {
+  private readonly router = inject(Router);
+  private readonly location = inject(Location);
+  private readonly groupService = inject(GroupService);
+  private readonly auth = inject(AuthService);
+  private readonly fb = inject(FormBuilder);
+
+  readonly isSubmitting = signal(false);
+  readonly buttonLabel = signal('Criar grupo 🎉');
+  readonly today = signal(this.localToday());
+
+  readonly form = this.fb.nonNullable.group({
+    name: ['', [Validators.required, Validators.minLength(3)]],
+    priceLimit: [''],
+    revealDate: [''],
+  });
+
+  goBack(): void {
+    this.location.back();
+  }
+
+  // Máscara estilo banco: digita-se da direita para a esquerda em centavos
+  // e o valor é exibido formatado em BRL (ex.: 5 -> R$ 0,05, 12345 -> R$ 123,45).
+  onPriceInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const digits = input.value.replace(/\D/g, '').slice(0, 11);
+    const formatted = digits ? this.formatBRL(Number(digits)) : '';
+    this.form.controls.priceLimit.setValue(formatted, { emitEvent: false });
+  }
+
+  private formatBRL(cents: number): string {
+    return (cents / 100).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+  }
+
+  // Data de hoje no fuso LOCAL (evita o off-by-one do toISOString em UTC).
+  private localToday(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  async createGroup(): Promise<void> {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    const name = this.form.controls.name.value.trim();
+
+    // Input mascarado em centavos (ex.: "R$ 1.234,56") → número em reais.
+    const priceDigits = this.form.controls.priceLimit.value.replace(/\D/g, '');
+    const price = priceDigits ? Number(priceDigits) / 100 : null;
+
+    // Interpreta a data como meia-noite LOCAL para não deslocar o dia exibido.
+    const revealDateRaw = this.form.controls.revealDate.value;
+    const revealDate = revealDateRaw
+      ? new Date(`${revealDateRaw}T00:00:00`).toISOString()
+      : null;
+
+    const userId = this.auth.user()?.id ?? null;
+
+    this.isSubmitting.set(true);
+    this.buttonLabel.set('Criando...');
+
+    try {
+      const group = await this.groupService.createGroup({
+        name,
+        price_limit: price,
+        reveal_date: revealDate,
+        owner_id: userId,
+      });
+
+      const storedAdmin = this.readTokenList('my_admin_tokens');
+      if (!storedAdmin.includes(group.admin_token)) {
+        storedAdmin.push(group.admin_token);
+        localStorage.setItem('my_admin_tokens', JSON.stringify(storedAdmin));
+      }
+
+      this.buttonLabel.set('Grupo criado ✓');
+      setTimeout(() => void this.router.navigateByUrl(`/admin/${group.admin_token}`), 400);
+    } catch (error) {
+      console.error(error);
+      this.buttonLabel.set('Erro ao criar');
+      setTimeout(() => this.buttonLabel.set('Criar grupo 🎉'), 2200);
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
+
+  private readTokenList(key: string): string[] {
+    try {
+      return JSON.parse(localStorage.getItem(key) || '[]') as string[];
+    } catch {
+      return [];
+    }
+  }
+}

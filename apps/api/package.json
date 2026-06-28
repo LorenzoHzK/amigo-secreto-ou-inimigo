@@ -1,0 +1,21 @@
+{
+  "name": "amigo-secreto-api",
+  "version": "1.0.0",
+  "description": "Supabase backend — Edge Functions e database migrations",
+  "private": true,
+  "scripts": {
+    "dev": "supabase start",
+    "stop": "supabase stop",
+    "status": "supabase status",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "db:diff": "supabase db diff",
+    "functions:serve": "supabase functions serve",
+    "functions:deploy": "supabase functions deploy",
+    "link": "supabase link",
+    "login": "supabase login"
+  },
+  "devDependencies": {
+    "supabase": "^2.0.0"
+  }
+}
